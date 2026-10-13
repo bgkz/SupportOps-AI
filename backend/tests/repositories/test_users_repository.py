@@ -1,12 +1,35 @@
 from unittest.mock import Mock
 
 import pytest
+from psycopg.errors import NotNullViolation
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
+
+
+def test_add_not_null_violation():
+
+    db = Mock(spec=Session)
+    db = Mock(spec=Session)
+    db.flush.side_effect = IntegrityError(
+        statement=None,
+        params=None,
+        orig=NotNullViolation("Testfehler"),
+    )
+    repo = UsersRepository(db)
+
+    with pytest.raises(
+        UserCreationError, match="Required user field is missing"
+    ) as exc_info:
+        repo.add(Users(user_role=None))
+
+    assert isinstance(exc_info.value.__cause__.orig, NotNullViolation)
+
+    db.rollback.assert_called_once()
+    db.commit.assert_not_called()
 
 
 @pytest.mark.parametrize(
