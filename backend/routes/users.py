@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from backend.schemas.users import CreateUserRequest
+from backend.schemas.users import CreateUserRequest, CreateUserResponse
 from backend.security.api_key import verify_api_key
 
 router = APIRouter(
@@ -21,7 +21,9 @@ def get_user(user_id: UUID):
     pass
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=CreateUserResponse
+)
 def create_user(create_user_request: CreateUserRequest):
     pass
 
