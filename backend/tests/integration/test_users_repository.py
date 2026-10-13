@@ -32,13 +32,18 @@ def test_add_user_duplicate(db: Session) -> None:
 
     repository.add(user=user)
 
-    with pytest.raises(EmailAlreadyExistError, match="Email already exists"):
+    with pytest.raises(
+        EmailAlreadyExistError, match="Email already exists"
+    ) as exc_info:
         repository.add(user=duplicate_user)
-        count = db.scalar(
-            select(func.count()).select_from(Users).where(Users.email == user.email)
-        )
 
-        assert count == 1
+        assert isinstance(exc_info.value.__cause__, IntegrityError)
+
+    count = db.scalar(
+        select(func.count()).select_from(Users).where(Users.email == user.email)
+    )
+
+    assert count == 1
 
 
 def test_add_user(db: Session) -> None:
