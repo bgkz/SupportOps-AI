@@ -3,12 +3,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr
 
+from backend.config import PASSWORD_MIN_LENGTH
 from backend.models.users import UserRole
 
 
 class CreateUserRequest(BaseModel):
     email: EmailStr
-    password: SecretStr = Field(min_length=12)
+    password: SecretStr = Field(min_length=PASSWORD_MIN_LENGTH)
 
 
 class CreateUserResponse(BaseModel):
