@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from backend.routes.shop import router as shop_router
+from backend.routes.shop.router import router as shop_router
 
 app = FastAPI()
 

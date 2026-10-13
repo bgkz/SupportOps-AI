@@ -1,13 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from backend.security.api_key import verify_api_key
-
-router = APIRouter(
-    prefix="/shop/orders",
-    dependencies=[Depends(verify_api_key)],
-)
+router = APIRouter(prefix="/orders")
 
 
 @router.post("/{order_id}/cancel")
