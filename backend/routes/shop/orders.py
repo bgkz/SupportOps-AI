@@ -5,6 +5,11 @@ from fastapi import APIRouter
 router = APIRouter(prefix="/orders")
 
 
+@router.get("/")
+def list_orders():
+    pass
+
+
 @router.post("/{order_id}/cancel")
 def cancel_order(order_id: UUID):
     pass
