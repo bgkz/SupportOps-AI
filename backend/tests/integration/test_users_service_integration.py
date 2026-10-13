@@ -12,6 +12,17 @@ from backend.schemas.users import CreateUserRequest
 from backend.security.passwords import verify_password
 
 
+def test_create_user_with_hash_like_password(db: Session) -> None:
+    service = get_users_service(db=db)
+    password = "$argon2id$v=19$m=65536,t=3,p=4$g2vGCeDo/CkiOu+XciV/Cw$akkU/Q1okx/ywuyb4U+0aMmahBYYBnDEWgQI7B10EIc"
+    request = CreateUserRequest(email="example@outlook.de", password=password)
+
+    user_created = service.create_user(create_user_request=request)
+
+    assert user_created.hashed_password != password
+    assert verify_password(password, user_created.hashed_password)
+
+
 def test_create_user_duplicate(db: Session) -> None:
     service = get_users_service(db=db)
     password = "langes Passwort 123"
