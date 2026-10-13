@@ -28,7 +28,7 @@ class Orders(Base):
         String(ORDER_NUMBER_MAX_LENGTH), unique=True, nullable=False
     )
 
-    created_at: Mapped[datetime.datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         nullable=False,
         server_default=sa.func.now(),
     )
