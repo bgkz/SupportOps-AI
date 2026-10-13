@@ -1,7 +1,9 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
+from backend.database import get_db
 from backend.schemas.users import CreateUserRequest, CreateUserResponse
 from backend.security.api_key import verify_api_key
 
@@ -25,7 +27,8 @@ def get_user(user_id: UUID):
     "/", status_code=status.HTTP_201_CREATED, response_model=CreateUserResponse
 )
 def create_user(create_user_request: CreateUserRequest):
-    pass
+    print(create_user_request.email)
+    print(create_user_request.password)
 
 
 @router.patch("/{user_id}")
