@@ -19,11 +19,14 @@ from backend.repositories.users_repository import UsersRepository
         (SQLAlchemyError("Testfehler"), UserCreationError),
     ],
 )
-def test_rollback(
-    exception: SQLAlchemyError, expected_exception: type[Exception]
+@pytest.mark.parametrize("operation", ["add", "flush", "refresh", "commit"])
+def test_add_user_rolls_back_on_database_error(
+    exception: SQLAlchemyError,
+    expected_exception: type[Exception],
+    operation: str,
 ) -> None:
     db = Mock(spec=Session)
-    db.add.side_effect = exception
+    getattr(db, operation).side_effect = exception
     repo = UsersRepository(db)
     user = Users(
         user_role=UserRole.CUSTOMER,
@@ -36,4 +39,7 @@ def test_rollback(
 
     assert exc_info.value.__cause__ is exception
     db.rollback.assert_called_once()
-    db.commit.assert_not_called()
+    if operation == "commit":
+        db.commit.assert_called_once()
+    else:
+        db.commit.assert_not_called()
