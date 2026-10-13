@@ -3,7 +3,6 @@ from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
-from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base

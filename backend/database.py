@@ -3,7 +3,7 @@ from collections.abc import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from backend.config import DATABASE_URL, ORDER_NUMBER_MAX_LENGTH
+from backend.config import DATABASE_URL
 
 
 class Base(DeclarativeBase):
