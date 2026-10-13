@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.schemas.users import CreateUserRequest, CreateUserResponse
 from backend.security.api_key import verify_api_key
+from backend.services.users_service import UsersService
 
 router = APIRouter(
     prefix="/users",
@@ -27,8 +28,7 @@ def get_user(user_id: UUID):
     "/", status_code=status.HTTP_201_CREATED, response_model=CreateUserResponse
 )
 def create_user(create_user_request: CreateUserRequest):
-    print(create_user_request.email)
-    print(create_user_request.password)
+    return UsersService().create_user(create_user_request=create_user_request)
 
 
 @router.patch("/{user_id}")
