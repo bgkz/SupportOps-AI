@@ -3,7 +3,6 @@ from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
-from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base
@@ -32,6 +31,5 @@ class Users(Base):
     )
 
     updated_at: Mapped[datetime] = mapped_column(
-        nullable=False,
-        server_default=sa.func.now(),
+        nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()
     )
