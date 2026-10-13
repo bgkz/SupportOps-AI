@@ -16,6 +16,41 @@ TEST_CREATED_AT = datetime(2026, 10, 13, 10, 30, 0)
 TEST_UPDATED_AT = datetime(2026, 10, 13, 11, 45, 0)
 
 
+def test_create_user_response_from_json() -> None:
+    data = """
+    {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "user_role": "support_agent",
+        "email": "example_email@outlook.com",
+        "created_at": "2026-10-13T10:30:00",
+        "updated_at": "2026-10-13T11:45:00"
+    }
+    """
+
+    response = CreateUserResponse.model_validate_json(data)
+
+    assert response.id == TEST_USER_ID
+    assert response.user_role == UserRole.SUPPORT_AGENT
+    assert response.email == VALID_TEST_EMAIL
+    assert response.created_at == TEST_CREATED_AT
+    assert response.updated_at == TEST_UPDATED_AT
+
+
+def test_create_user_response_from_strings() -> None:
+    response = CreateUserResponse(
+        id=str(TEST_USER_ID),
+        user_role="customer",
+        email=VALID_TEST_EMAIL,
+        created_at="2026-10-13T10:30:00",
+        updated_at="2026-10-13T11:45:00",
+    )
+
+    assert response.id == TEST_USER_ID
+    assert response.user_role == UserRole.CUSTOMER
+    assert response.created_at == TEST_CREATED_AT
+    assert response.updated_at == TEST_UPDATED_AT
+
+
 @pytest.mark.parametrize(
     ("field", "invalid_value"),
     [
@@ -57,11 +92,14 @@ def test_create_user_response_from_attributes() -> None:
 
     assert response.id == user.id
     assert response.email == user.email
+    assert response.user_role == UserRole.CUSTOMER
+    assert response.created_at == TEST_CREATED_AT
+    assert response.updated_at == TEST_UPDATED_AT
     assert "hashed_password" not in response.model_dump()
 
 
-def test_create_user_response_valid_values():
-    create_user_response = CreateUserResponse(
+def test_create_user_response_valid_values() -> None:
+    response = CreateUserResponse(
         id=TEST_USER_ID,
         user_role=UserRole.CUSTOMER,
         email=VALID_TEST_EMAIL,
@@ -69,13 +107,11 @@ def test_create_user_response_valid_values():
         updated_at=TEST_UPDATED_AT,
     )
 
-    assert create_user_response.id == TEST_USER_ID
-    assert create_user_response.user_role == UserRole.CUSTOMER
-    assert create_user_response.email == VALID_TEST_EMAIL
-    assert create_user_response.created_at == TEST_CREATED_AT
-    assert create_user_response.updated_at == TEST_UPDATED_AT
-
-    user_obj = Users()
+    assert response.id == TEST_USER_ID
+    assert response.user_role == UserRole.CUSTOMER
+    assert response.email == VALID_TEST_EMAIL
+    assert response.created_at == TEST_CREATED_AT
+    assert response.updated_at == TEST_UPDATED_AT
 
 
 @pytest.mark.parametrize("password", ["", " ", "a" * (PASSWORD_MIN_LENGTH - 1)])
@@ -83,7 +119,7 @@ def test_create_user_rejects_invalid_password(password: str) -> None:
     with pytest.raises(ValidationError) as exc_info:
         CreateUserRequest(email=VALID_TEST_EMAIL, password=password)
 
-    assert exc_info.value.errors()[0]["loc"] == ("password",)
+    assert [error["loc"] for error in exc_info.value.errors()] == [("password",)]
 
 
 @pytest.mark.parametrize(
@@ -96,20 +132,18 @@ def test_create_user_accepts_valid_password(password: str) -> None:
 
 
 def test_create_user_valid_email_valid_password() -> None:
-    create_user_request = CreateUserRequest(
-        email=VALID_TEST_EMAIL, password=VALID_TEST_PASSWORD
-    )
+    request = CreateUserRequest(email=VALID_TEST_EMAIL, password=VALID_TEST_PASSWORD)
 
-    assert create_user_request.email == VALID_TEST_EMAIL
-    assert create_user_request.password.get_secret_value() == VALID_TEST_PASSWORD
+    assert request.email == VALID_TEST_EMAIL
+    assert request.password.get_secret_value() == VALID_TEST_PASSWORD
 
 
 @pytest.mark.parametrize("email", ["keine-email", "user@", "@example.com"])
-def test_create_user_rejects_invalid_email(email: str):
+def test_create_user_rejects_invalid_email(email: str) -> None:
     with pytest.raises(ValidationError) as exc_info:
         CreateUserRequest(
             email=email,
             password=VALID_TEST_PASSWORD,
         )
 
-    assert exc_info.value.errors()[0]["loc"] == ("email",)
+    assert [error["loc"] for error in exc_info.value.errors()] == [("email",)]
