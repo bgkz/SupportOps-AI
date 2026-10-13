@@ -12,6 +12,30 @@ from backend.schemas.users import CreateUserRequest
 from backend.security.passwords import verify_password
 
 
+def test_create_user_duplicate_email_with_whitespace(db: Session) -> None:
+    service = get_users_service(db=db)
+    password = "langes Passwort 123"
+
+    request = CreateUserRequest(email="example@outlook.de", password=password)
+    duplicate_request = CreateUserRequest(
+        email="  example@outlook.de  ", password=password
+    )
+
+    assert duplicate_request.email == request.email
+
+    service.create_user(create_user_request=request)
+
+    with pytest.raises(EmailAlreadyExistError):
+        service.create_user(create_user_request=duplicate_request)
+
+    db.expunge_all()
+
+    stmt = select(func.count()).select_from(Users).where(Users.email == request.email)
+    count = db.execute(stmt).scalar_one()
+
+    assert count == 1
+
+
 def test_create_user_with_hash_like_password(db: Session) -> None:
     service = get_users_service(db=db)
     password = "$argon2id$v=19$m=65536,t=3,p=4$g2vGCeDo/CkiOu+XciV/Cw$akkU/Q1okx/ywuyb4U+0aMmahBYYBnDEWgQI7B10EIc"
