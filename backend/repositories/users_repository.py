@@ -17,9 +17,9 @@ class UsersRepository:
             self.db.commit()
 
             return user
-        except SQLAlchemyError as error:
-            self.db.rollback()
-            raise UserCreationError("User could not be created") from error
         except IntegrityError as error:
             self.db.rollback()
             raise EmailAlreadyExistError("Email already exists") from error
+        except SQLAlchemyError as error:
+            self.db.rollback()
+            raise UserCreationError("User could not be created") from error
