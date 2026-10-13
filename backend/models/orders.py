@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 
 import sqlalchemy as sa
-from sqlalchemy import String
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.config import ORDER_NUMBER_MAX_LENGTH
@@ -26,6 +26,10 @@ class Orders(Base):
 
     order_number: Mapped[str] = mapped_column(
         String(ORDER_NUMBER_MAX_LENGTH), unique=True, nullable=False
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", name="fk_orders_user_id_users")
     )
 
     created_at: Mapped[datetime] = mapped_column(
