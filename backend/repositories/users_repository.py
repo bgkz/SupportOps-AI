@@ -1,3 +1,4 @@
+from psycopg.errors import NotNullViolation
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,8 @@ class UsersRepository:
             return user
         except IntegrityError as error:
             self.db.rollback()
+            if isinstance(error.orig, NotNullViolation):
+                raise UserCreationError("Required user field is missing") from error
             raise EmailAlreadyExistError("Email already exists") from error
         except SQLAlchemyError as error:
             self.db.rollback()

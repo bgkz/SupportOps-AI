@@ -3,13 +3,61 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.security.passwords import hash_password
+
+
+def test_add_user_invalid_role(db: Session) -> None:
+    repository = UsersRepository(db)
+    hashed = hash_password("Test-Passwort-123")
+    invalid_user = Users(
+        user_role="unknown",
+        email="test.user@example.com",
+        hashed_password=hashed,
+    )
+
+    with pytest.raises(
+        UserCreationError, match="User could not be created"
+    ) as exc_info:
+        repository.add(user=invalid_user)
+    assert isinstance(exc_info.value.__cause__, SQLAlchemyError)
+
+    assert db.scalar(select(func.count()).select_from(Users)) == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("user_role", None),
+        ("email", None),
+        ("hashed_password", None),
+    ],
+)
+def test_add_user_none_attributes(
+    db: Session, field: str, invalid_value: str | None
+) -> None:
+    repository = UsersRepository(db)
+    hashed = hash_password("Test-Passwort-123")
+    invalid_user = Users(
+        user_role=UserRole.SUPPORT_AGENT,
+        email="test.user@example.com",
+        hashed_password=hashed,
+    )
+
+    setattr(invalid_user, field, invalid_value)
+
+    with pytest.raises(
+        UserCreationError, match="Required user field is missing"
+    ) as exc_info:
+        repository.add(user=invalid_user)
+    assert isinstance(exc_info.value.__cause__, SQLAlchemyError)
+
+    assert db.scalar(select(func.count()).select_from(Users)) == 0
 
 
 def test_add_user_duplicate(db: Session) -> None:
@@ -28,8 +76,6 @@ def test_add_user_duplicate(db: Session) -> None:
         hashed_password=hashed,
     )
 
-    assert duplicate_user.email == user.email
-
     repository.add(user=user)
 
     with pytest.raises(
@@ -37,7 +83,7 @@ def test_add_user_duplicate(db: Session) -> None:
     ) as exc_info:
         repository.add(user=duplicate_user)
 
-        assert isinstance(exc_info.value.__cause__, IntegrityError)
+    assert isinstance(exc_info.value.__cause__, IntegrityError)
 
     count = db.scalar(
         select(func.count()).select_from(Users).where(Users.email == user.email)
