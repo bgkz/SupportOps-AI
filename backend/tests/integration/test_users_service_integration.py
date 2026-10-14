@@ -57,12 +57,24 @@ def test_create_user_duplicate(db: Session) -> None:
     with pytest.raises(EmailAlreadyExistError, match="Email already exists"):
         service.create_user(create_user_request=duplicate_request)
 
+    valid_request_after_duplicate = CreateUserRequest(
+        email="valid-email@outlook.de", password="Some Safe Password 12345"
+    )
+
+    service.create_user(create_user_request=valid_request_after_duplicate)
+
     db.expunge_all()
 
     stmt = select(func.count()).select_from(Users).where(Users.email == request.email)
     count = db.execute(stmt).scalar_one()
-
     assert count == 1
+
+    stmt = (
+        select(func.count())
+        .select_from(Users)
+        .where(Users.email == valid_request_after_duplicate.email)
+    )
+    assert db.execute(stmt).scalar_one() == 1
 
 
 def test_create_user(db: Session) -> None:
@@ -89,3 +101,5 @@ def test_create_user(db: Session) -> None:
 
     assert user_from_db is not None
     assert user_from_db.email == request.email
+    assert user_from_db.user_role == UserRole.CUSTOMER
+    assert verify_password(password, user_from_db.hashed_password)
