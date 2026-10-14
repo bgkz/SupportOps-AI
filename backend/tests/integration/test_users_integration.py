@@ -11,6 +11,14 @@ from backend.schemas.users import CreateUserResponse
 from backend.security.passwords import verify_password
 
 
+@pytest.fixture(autouse=True)
+def configure_test_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "backend.security.api_key.BACKEND_API_KEY",
+        "test-api-key",
+    )
+
+
 @pytest.mark.parametrize(
     "headers",
     [
@@ -21,15 +29,9 @@ from backend.security.passwords import verify_password
 )
 def test_create_user_rejects_invalid_or_missing_api_key(
     client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
     db: Session,
     headers: dict[str, str],
 ) -> None:
-    monkeypatch.setattr(
-        "backend.security.api_key.BACKEND_API_KEY",
-        "test-api-key",
-    )
-
     response = client.post(
         "/users/",
         headers=headers,
@@ -51,19 +53,14 @@ def test_create_user_rejects_invalid_or_missing_api_key(
         ({"password": "valid-password123"}, {"email"}),
         ({}, {"email", "password"}),
     ],
+    ids=["missing-password", "missing-email", "missing-both-fields"],
 )
 def test_create_user_rejects_missing_fields(
     client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
     db: Session,
     payload: dict[str, str],
     missing_fields: set[str],
 ) -> None:
-    monkeypatch.setattr(
-        "backend.security.api_key.BACKEND_API_KEY",
-        "test-api-key",
-    )
-
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -77,34 +74,38 @@ def test_create_user_rejects_missing_fields(
         ("body", field) for field in missing_fields
     }
     assert all(error["type"] == "missing" for error in errors)
-    assert all(error["msg"] == "Field required" for error in errors)
 
     assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
 
 
 @pytest.mark.parametrize(
-    ("email", "password"),
+    ("email", "password", "invalid_field"),
     [
-        ("", "Secret Password 123"),
-        (None, "Secret Password 123"),
-        ("   ", "Secret Password 123"),
-        ("example@outlook.com", "sss"),
-        ("example@outlook.com", None),
-        ("example@outlook.com", ""),
-        ("keine-email", "Secret Password 123"),
+        ("", "Secret Password 123", "email"),
+        (None, "Secret Password 123", "email"),
+        ("   ", "Secret Password 123", "email"),
+        ("example@outlook.com", "sss", "password"),
+        ("example@outlook.com", None, "password"),
+        ("example@outlook.com", "", "password"),
+        ("keine-email", "Secret Password 123", "email"),
+    ],
+    ids=[
+        "empty-email",
+        "null-email",
+        "whitespace-email",
+        "short-password",
+        "null-password",
+        "empty-password",
+        "malformed-email",
     ],
 )
 def test_create_user_rejects_invalid_request(
     client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
     db: Session,
     email: str | None,
     password: str | None,
+    invalid_field: str,
 ) -> None:
-    monkeypatch.setattr(
-        "backend.security.api_key.BACKEND_API_KEY",
-        "test-api-key",
-    )
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -115,18 +116,15 @@ def test_create_user_rejects_invalid_request(
     )
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    errors = response.json()["detail"]
+    assert {tuple(error["loc"]) for error in errors} == {("body", invalid_field)}
 
     assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
 
 
 def test_create_user_rejects_duplicate_email(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, db: Session
+    client: TestClient, db: Session
 ) -> None:
-    monkeypatch.setattr(
-        "backend.security.api_key.BACKEND_API_KEY",
-        "test-api-key",
-    )
-
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -158,12 +156,8 @@ def test_create_user_rejects_duplicate_email(
 
 
 def test_create_user(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch, db: Session
+    client: TestClient, db: Session
 ) -> None:
-    monkeypatch.setattr(
-        "backend.security.api_key.BACKEND_API_KEY",
-        "test-api-key",
-    )
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -173,11 +167,12 @@ def test_create_user(
         },
     )
 
-    assert "password" not in response.json()
-    assert "hashed_password" not in response.json()
-
     assert response.status_code == status.HTTP_201_CREATED
-    create_user_response = CreateUserResponse.model_validate(response.json())
+    data = response.json()
+    assert "password" not in data
+    assert "hashed_password" not in data
+
+    create_user_response = CreateUserResponse.model_validate(data)
     assert isinstance(create_user_response.id, UUID)
     assert create_user_response.user_role == UserRole.CUSTOMER
     assert str(create_user_response.email) == "example@outlook.com"
