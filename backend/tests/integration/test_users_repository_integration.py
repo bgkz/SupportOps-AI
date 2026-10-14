@@ -1,5 +1,5 @@
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select
@@ -10,6 +10,13 @@ from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.security.passwords import hash_password
+
+
+def test_get_returns_none_for_unknown_user_id(db: Session) -> None:
+    repository = UsersRepository(db=db)
+    user = repository.get(user_id=uuid4())
+
+    assert user is None
 
 
 def test_get_returns_existing_user(db: Session) -> None:
