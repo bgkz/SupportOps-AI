@@ -6,7 +6,7 @@ from backend.schemas.users import CreateUserRequest
 from backend.services.users_service import UsersService
 
 
-def test_create_user_calls_hash_password() -> None:
+def test_create_user_hashes_password_and_passes_user_to_repository() -> None:
     repo_mock = Mock(spec=UsersRepository)
     repo_mock.add = Mock()
     service = UsersService(users_repo=repo_mock)
