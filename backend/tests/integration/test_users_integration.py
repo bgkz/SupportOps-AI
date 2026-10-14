@@ -12,6 +12,44 @@ from backend.security.passwords import verify_password
 
 
 @pytest.mark.parametrize(
+    ("payload", "missing_fields"),
+    [
+        ({"email": "valid-mail@outlook.de"}, {"password"}),
+        ({"password": "valid-password123"}, {"email"}),
+        ({}, {"email", "password"}),
+    ],
+)
+def test_create_user_rejects_missing_fields(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    db: Session,
+    payload: dict[str, str],
+    missing_fields: set[str],
+) -> None:
+    monkeypatch.setattr(
+        "backend.security.api_key.BACKEND_API_KEY",
+        "test-api-key",
+    )
+
+    response = client.post(
+        "/users/",
+        headers={"X-API-Key": "test-api-key"},
+        json=payload,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    errors = response.json()["detail"]
+    assert {tuple(error["loc"]) for error in errors} == {
+        ("body", field) for field in missing_fields
+    }
+    assert all(error["type"] == "missing" for error in errors)
+    assert all(error["msg"] == "Field required" for error in errors)
+
+    assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
+
+
+@pytest.mark.parametrize(
     ("email", "password"),
     [
         ("", "Secret Password 123"),
@@ -20,6 +58,7 @@ from backend.security.passwords import verify_password
         ("example@outlook.com", "sss"),
         ("example@outlook.com", None),
         ("example@outlook.com", ""),
+        ("keine-email", "Secret Password 123"),
     ],
 )
 def test_create_user_rejects_invalid_request(
@@ -33,7 +72,6 @@ def test_create_user_rejects_invalid_request(
         "backend.security.api_key.BACKEND_API_KEY",
         "test-api-key",
     )
-
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},

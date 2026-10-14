@@ -37,12 +37,12 @@ def create_user(
     except EmailAlreadyExistError as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already exists",
+            detail=str(error),
         ) from error
     except UserCreationError as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="User could not be created",
+            detail=str(error),
         ) from error
 
 
