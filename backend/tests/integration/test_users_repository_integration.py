@@ -12,6 +12,36 @@ from backend.repositories.users_repository import UsersRepository
 from backend.security.passwords import hash_password
 
 
+def test_get_returns_target_user_when_multiple_users_exist(db: Session) -> None:
+    hashed = hash_password(password="LongPassword123")
+    repository = UsersRepository(db=db)
+    target_user = repository.add(
+        Users(
+            email="valid-email@outlook.de",
+            hashed_password=hashed,
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    repository.add(
+        Users(
+            email="another-cool-email@outlook.de",
+            hashed_password=hash_password(password="solid-password-xDxDxD"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+
+    assert db.scalar(select(func.count()).select_from(Users)) == 2
+
+    target_user_id = target_user.id
+    db.expunge_all()
+
+    target_user_found = repository.get(user_id=target_user_id)
+
+    assert target_user_found is not None
+    assert target_user_found.id == target_user_id
+    assert target_user_found.email == "valid-email@outlook.de"
+
+
 def test_get_returns_none_for_unknown_user_id(db: Session) -> None:
     repository = UsersRepository(db=db)
     user = repository.get(user_id=uuid4())
