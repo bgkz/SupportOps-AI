@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
 from backend.dependencies.users import get_users_service
 from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
