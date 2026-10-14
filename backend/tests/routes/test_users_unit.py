@@ -10,7 +10,7 @@ from backend.dependencies.users import get_users_service
 from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
 from backend.main import app
 from backend.models.users import UserRole
-from backend.schemas.users import CreateUserRequest, CreateUserResponse
+from backend.schemas.users import CreateUserRequest, UserResponse
 from backend.services.users_service import UsersService
 
 
@@ -28,7 +28,7 @@ def test_create_user_passes_request_to_service(client: TestClient) -> None:
         email="someemail@outlook.de", password="Somepassword123"
     )
 
-    expected_response = CreateUserResponse(
+    expected_response = UserResponse(
         id=uuid4(),
         email=request.email,
         user_role=UserRole.CUSTOMER,

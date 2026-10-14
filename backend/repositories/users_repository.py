@@ -1,14 +1,27 @@
+from uuid import UUID
+
 from psycopg.errors import NotNullViolation
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
+from backend.exceptions.users import (
+    EmailAlreadyExistError,
+    UserCreationError,
+    UserRetrievalError,
+)
 from backend.models.users import Users
 
 
 class UsersRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    def get(self, user_id: UUID) -> Users | None:
+        try:
+            return self.db.get(Users, user_id)
+        except SQLAlchemyError as error:
+            raise UserRetrievalError("User could not be retrieved") from error
 
     def add(self, user: Users) -> Users:
         try:

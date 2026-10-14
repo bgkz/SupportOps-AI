@@ -3,8 +3,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.dependencies.users import get_users_service
-from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
-from backend.schemas.users import CreateUserRequest, CreateUserResponse
+from backend.exceptions.users import (
+    EmailAlreadyExistError,
+    UserCreationError,
+    UserNotFoundError,
+)
+from backend.schemas.users import CreateUserRequest, UserResponse
 from backend.security.api_key import verify_api_key
 from backend.services.users_service import UsersService
 
@@ -19,14 +23,15 @@ def list_users():
     pass
 
 
-@router.get("/{user_id}")
-def get_user(user_id: UUID):
-    pass
+@router.get("/{user_id}", status_code=status.HTTP_200_OK, response_model=UserResponse)
+def get_user(user_id: UUID, users_service: UsersService = Depends(get_users_service)):  # noqa: B008
+    try:
+        return users_service.get_user(user_id)
+    except UserNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
 
 
-@router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=CreateUserResponse
-)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def create_user(
     create_user_request: CreateUserRequest,
     users_service: UsersService = Depends(get_users_service),  # noqa: B008

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.models.users import UserRole, Users
-from backend.schemas.users import CreateUserResponse
+from backend.schemas.users import UserResponse
 from backend.security.passwords import verify_password
 
 
@@ -122,9 +122,7 @@ def test_create_user_rejects_invalid_request(
     assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
 
 
-def test_create_user_rejects_duplicate_email(
-    client: TestClient, db: Session
-) -> None:
+def test_create_user_rejects_duplicate_email(client: TestClient, db: Session) -> None:
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -155,9 +153,7 @@ def test_create_user_rejects_duplicate_email(
     assert db.execute(stmt).scalar_one() == 1
 
 
-def test_create_user(
-    client: TestClient, db: Session
-) -> None:
+def test_create_user(client: TestClient, db: Session) -> None:
     response = client.post(
         "/users/",
         headers={"X-API-Key": "test-api-key"},
@@ -172,7 +168,7 @@ def test_create_user(
     assert "password" not in data
     assert "hashed_password" not in data
 
-    create_user_response = CreateUserResponse.model_validate(data)
+    create_user_response = UserResponse.model_validate(data)
     assert isinstance(create_user_response.id, UUID)
     assert create_user_response.user_role == UserRole.CUSTOMER
     assert str(create_user_response.email) == "example@outlook.com"

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from backend.config import PASSWORD_MIN_LENGTH
 from backend.models.users import UserRole, Users
-from backend.schemas.users import CreateUserRequest, CreateUserResponse
+from backend.schemas.users import CreateUserRequest, UserResponse
 
 VALID_TEST_PASSWORD = "langes-passwort-123"
 VALID_TEST_EMAIL = "example_email@outlook.com"
@@ -27,7 +27,7 @@ def test_create_user_response_from_json() -> None:
     }
     """
 
-    response = CreateUserResponse.model_validate_json(data)
+    response = UserResponse.model_validate_json(data)
 
     assert response.id == TEST_USER_ID
     assert response.user_role == UserRole.SUPPORT_AGENT
@@ -37,7 +37,7 @@ def test_create_user_response_from_json() -> None:
 
 
 def test_create_user_response_from_strings() -> None:
-    response = CreateUserResponse(
+    response = UserResponse(
         id=str(TEST_USER_ID),
         user_role="customer",
         email=VALID_TEST_EMAIL,
@@ -73,7 +73,7 @@ def test_create_user_response_invalid_values(field: str, invalid_value: str) -> 
     values[field] = invalid_value
 
     with pytest.raises(ValidationError) as exc_info:
-        CreateUserResponse.model_validate(values)
+        UserResponse.model_validate(values)
 
     assert [error["loc"] for error in exc_info.value.errors()] == [(field,)]
 
@@ -88,7 +88,7 @@ def test_create_user_response_from_attributes() -> None:
         updated_at=TEST_UPDATED_AT,
     )
 
-    response = CreateUserResponse.model_validate(user)
+    response = UserResponse.model_validate(user)
 
     assert response.id == user.id
     assert response.email == user.email
@@ -99,7 +99,7 @@ def test_create_user_response_from_attributes() -> None:
 
 
 def test_create_user_response_valid_values() -> None:
-    response = CreateUserResponse(
+    response = UserResponse(
         id=TEST_USER_ID,
         user_role=UserRole.CUSTOMER,
         email=VALID_TEST_EMAIL,
