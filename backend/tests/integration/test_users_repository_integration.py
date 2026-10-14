@@ -12,6 +12,29 @@ from backend.repositories.users_repository import UsersRepository
 from backend.security.passwords import hash_password
 
 
+def test_get_returns_existing_user(db: Session) -> None:
+    hashed = hash_password(password="LongPassword123")
+    repository = UsersRepository(db=db)
+    user_added = repository.add(
+        Users(
+            email="valid-email@outlook.de",
+            hashed_password=hashed,
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    user_id = user_added.id
+    db.expunge_all()
+    user_found = repository.get(user_id=user_id)
+
+    assert user_found is not None
+    assert user_found.id == user_id
+    assert user_found.email == "valid-email@outlook.de"
+    assert isinstance(user_found.created_at, datetime)
+    assert isinstance(user_found.updated_at, datetime)
+    assert user_found.hashed_password == hashed
+    assert user_found.user_role == UserRole.CUSTOMER
+
+
 def test_add_user_invalid_role(db: Session) -> None:
     repository = UsersRepository(db)
     hashed = hash_password("Test-Passwort-123")
