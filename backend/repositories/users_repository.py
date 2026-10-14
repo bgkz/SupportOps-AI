@@ -1,7 +1,6 @@
 from uuid import UUID
 
 from psycopg.errors import NotNullViolation
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
