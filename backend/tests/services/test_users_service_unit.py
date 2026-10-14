@@ -1,5 +1,4 @@
-import datetime
-from datetime import UTC
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 from uuid import UUID
 

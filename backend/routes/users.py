@@ -7,6 +7,7 @@ from backend.exceptions.users import (
     EmailAlreadyExistError,
     UserCreationError,
     UserNotFoundError,
+    UserRetrievalError,
 )
 from backend.schemas.users import CreateUserRequest, UserResponse
 from backend.security.api_key import verify_api_key
@@ -29,6 +30,10 @@ def get_user(user_id: UUID, users_service: UsersService = Depends(get_users_serv
         return users_service.get_user(user_id)
     except UserNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except UserRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
