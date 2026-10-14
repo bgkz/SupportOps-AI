@@ -6,10 +6,39 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.dependencies.users import get_users_service
-from backend.exceptions.users import EmailAlreadyExistError
+from backend.exceptions.users import EmailAlreadyExistError, UserNotFoundError
 from backend.models.users import UserRole, Users
 from backend.schemas.users import CreateUserRequest
-from backend.security.passwords import verify_password
+from backend.security.passwords import hash_password, verify_password
+
+
+def test_get_user_raises_not_found_for_unknown_id(db: Session) -> None:
+    service = get_users_service(db=db)
+    with pytest.raises(UserNotFoundError, match="User not found"):
+        service.get_user(user_id=UUID("550e8400-e29b-41d4-a716-446655440000"))
+
+
+def test_get_user_returns_existing_user(db: Session) -> None:
+    service = get_users_service(db=db)
+    hashed = hash_password("LongPassword123")
+    expected_user = Users(
+        email="valid-email@outlook.de",
+        hashed_password=hashed,
+        user_role=UserRole.CUSTOMER,
+    )
+    db.add(expected_user)
+    db.flush()
+
+    user_id = expected_user.id
+    db.expunge_all()
+
+    user_found = service.get_user(user_id=user_id)
+
+    assert user_found is not None
+    assert user_found.id == user_id
+    assert user_found.email == "valid-email@outlook.de"
+    assert user_found.hashed_password == hashed
+    assert user_found.user_role == UserRole.CUSTOMER
 
 
 def test_create_user_duplicate_email_with_whitespace(db: Session) -> None:
