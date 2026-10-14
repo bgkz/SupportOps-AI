@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.dependencies.users import get_users_service
-from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
+from backend.exceptions.users import EmailAlreadyExistError
 from backend.models.users import UserRole, Users
 from backend.schemas.users import CreateUserRequest
 from backend.security.passwords import verify_password
