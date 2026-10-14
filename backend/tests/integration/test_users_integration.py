@@ -12,6 +12,39 @@ from backend.security.passwords import verify_password
 
 
 @pytest.mark.parametrize(
+    "headers",
+    [
+        {"X-API-Key": "wrong-api-key"},
+        {},
+    ],
+    ids=["invalid-api-key", "missing-api-key"],
+)
+def test_create_user_rejects_invalid_or_missing_api_key(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    db: Session,
+    headers: dict[str, str],
+) -> None:
+    monkeypatch.setattr(
+        "backend.security.api_key.BACKEND_API_KEY",
+        "test-api-key",
+    )
+
+    response = client.post(
+        "/users/",
+        headers=headers,
+        json={
+            "email": "example@outlook.com",
+            "password": "Secret Password 123",
+        },
+    )
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "API-Key missing or invalid"
+    assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
+
+
+@pytest.mark.parametrize(
     ("payload", "missing_fields"),
     [
         ({"email": "valid-mail@outlook.de"}, {"password"}),
