@@ -11,6 +11,43 @@ from backend.schemas.users import CreateUserResponse
 from backend.security.passwords import verify_password
 
 
+@pytest.mark.parametrize(
+    ("email", "password"),
+    [
+        ("", "Secret Password 123"),
+        (None, "Secret Password 123"),
+        ("   ", "Secret Password 123"),
+        ("example@outlook.com", "sss"),
+        ("example@outlook.com", None),
+        ("example@outlook.com", ""),
+    ],
+)
+def test_create_user_rejects_invalid_request(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    db: Session,
+    email: str | None,
+    password: str | None,
+) -> None:
+    monkeypatch.setattr(
+        "backend.security.api_key.BACKEND_API_KEY",
+        "test-api-key",
+    )
+
+    response = client.post(
+        "/users/",
+        headers={"X-API-Key": "test-api-key"},
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    assert db.execute(select(func.count()).select_from(Users)).scalar_one() == 0
+
+
 def test_create_user_rejects_duplicate_email(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, db: Session
 ) -> None:
