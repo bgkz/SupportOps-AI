@@ -20,7 +20,8 @@ def test_create_user_propagates_repository_errors(
     exception: type[Exception], exception_msg: str
 ) -> None:
     repo_mock = Mock(spec=UsersRepository)
-    repo_mock.add.side_effect = exception(exception_msg)
+    error = exception(exception_msg)
+    repo_mock.add.side_effect = error
     service = UsersService(users_repo=repo_mock)
     request = CreateUserRequest(
         email="example@outlook.com",
@@ -32,14 +33,15 @@ def test_create_user_propagates_repository_errors(
             "backend.services.users_service.hash_password",
             return_value="fake-hash",
         ),
-        pytest.raises(exception, match=exception_msg),
+        pytest.raises(exception, match=exception_msg) as exc_info,
     ):
         service.create_user(create_user_request=request)
+
+    assert exc_info.value is error
 
 
 def test_create_user_hashes_password_and_passes_user_to_repository() -> None:
     repo_mock = Mock(spec=UsersRepository)
-    repo_mock.add = Mock()
     service = UsersService(users_repo=repo_mock)
     request = CreateUserRequest(
         email="example@outlook.com",
@@ -50,8 +52,9 @@ def test_create_user_hashes_password_and_passes_user_to_repository() -> None:
         "backend.services.users_service.hash_password",
         return_value="fake-hash",
     ) as hash_password_mock:
-        service.create_user(create_user_request=request)
+        result = service.create_user(create_user_request=request)
 
+    assert result is repo_mock.add.return_value
     hash_password_mock.assert_called_once_with("Secret Password 123")
     repo_mock.add.assert_called_once()
 
