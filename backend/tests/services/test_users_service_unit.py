@@ -9,11 +9,77 @@ from backend.exceptions.users import (
     UserCreationError,
     UserNotFoundError,
     UserRetrievalError,
+    UserUpdateError,
 )
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
 from backend.services.users_service import UsersService
+
+
+@pytest.mark.parametrize(
+    ("exception", "exception_msg"),
+    [
+        (EmailAlreadyExistError, "Email already exists"),
+        (UserUpdateError, "User could not be updated"),
+    ],
+)
+def test_change_email_propagates_update_errors(
+    exception: type[Exception], exception_msg: str
+) -> None:
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    repo = Mock(spec=UsersRepository)
+    existing_user = Users(
+        id=user_id,
+        user_role=UserRole.CUSTOMER,
+        email="test.user@example.com",
+        hashed_password="fake-hash",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    repo.get.return_value = existing_user
+    error = exception(exception_msg)
+    repo.update.side_effect = error
+
+    service = UsersService(users_repo=repo)
+
+    with pytest.raises(exception, match=exception_msg) as exc_info:
+        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+
+    assert exc_info.value is error
+    repo.get.assert_called_once_with(user_id)
+    repo.update.assert_called_once_with(user=existing_user)
+
+
+def test_change_email_propagates_user_retrieval_error() -> None:
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    repo = Mock(spec=UsersRepository)
+    error = UserRetrievalError("User could not be retrieved")
+    repo.get.side_effect = error
+    service = UsersService(users_repo=repo)
+
+    with pytest.raises(
+        UserRetrievalError, match="User could not be retrieved"
+    ) as exc_info:
+        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+
+    assert exc_info.value is error
+
+    repo.get.assert_called_once_with(user_id)
+    repo.update.assert_not_called()
+
+
+def test_change_email_raises_not_found_for_unknown_user() -> None:
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    repo = Mock(spec=UsersRepository)
+    repo.get.return_value = None
+    service = UsersService(users_repo=repo)
+
+    with pytest.raises(UserNotFoundError, match="User not found"):
+        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+
+    repo.get.assert_called_once_with(user_id)
+    repo.update.assert_not_called()
 
 
 def test_change_email_updates_existing_user_and_returns_repository_result() -> None:
