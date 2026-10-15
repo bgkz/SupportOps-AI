@@ -2,23 +2,185 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+from psycopg.errors import NotNullViolation, UniqueViolation
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, InvalidRequestError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
+from backend.exceptions.users import (
+    EmailAlreadyExistError,
+    UserCreationError,
+    UserUpdateError,
+)
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.security.passwords import hash_password
 
 
-def test_get_returns_target_user_when_multiple_users_exist(db: Session) -> None:
-    hashed = hash_password(password="LongPassword123")
+def test_update_rejects_null_email(db: Session) -> None:
+    repository = UsersRepository(db=db)
+    user = repository.add(
+        Users(
+            email="original-email@outlook.de",
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    user_id = user.id
+    user.email = None
+
+    with pytest.raises(UserUpdateError, match="User could not be updated") as exc_info:
+        repository.update(user=user)
+
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, IntegrityError)
+    assert isinstance(cause.orig, NotNullViolation)
+
+    db.expunge_all()
+
+    stored_user = db.get(Users, user_id)
+
+    assert stored_user is not None
+    assert stored_user.email == "original-email@outlook.de"
+
+
+def test_update_rejects_detached_user(db: Session) -> None:
+    repository = UsersRepository(db=db)
+    user = repository.add(
+        Users(
+            email="original-email@outlook.de",
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    user_id = user.id
+
+    db.expunge_all()
+    user.email = "updated-email@outlook.de"
+
+    with pytest.raises(UserUpdateError, match="User could not be updated") as exc_info:
+        repository.update(user=user)
+
+    assert isinstance(exc_info.value.__cause__, InvalidRequestError)
+
+    stored_user = db.get(Users, user_id)
+
+    assert stored_user is not None
+    assert stored_user.email == "original-email@outlook.de"
+
+
+def test_update_rejects_duplicate_email(db: Session) -> None:
+    repository = UsersRepository(db=db)
+    already_existing_email = "existing-email@outlook.de"
+    repository.add(
+        Users(
+            email=already_existing_email,
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+
+    user = repository.add(
+        Users(
+            email="dummy-email@outlook.de",
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+
+    user_id = user.id
+
+    user.email = already_existing_email
+
+    with pytest.raises(
+        EmailAlreadyExistError, match="Email already exists"
+    ) as exc_info:
+        repository.update(user=user)
+
+    cause = exc_info.value.__cause__
+    assert isinstance(cause, IntegrityError)
+    assert isinstance(cause.orig, UniqueViolation)
+
+    db.expunge_all()
+
+    stored_user = db.get(Users, user_id)
+
+    assert stored_user is not None
+    assert stored_user.email == "dummy-email@outlook.de"
+
+
+def test_update_changes_target_email_and_preserves_other_user_email(
+    db: Session,
+) -> None:
     repository = UsersRepository(db=db)
     target_user = repository.add(
         Users(
             email="valid-email@outlook.de",
-            hashed_password=hashed,
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+
+    untouched_user = repository.add(
+        Users(
+            email="another-persons-email@outlook.de",
+            hashed_password=hash_password(password="AnotherPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    user_id = target_user.id
+    untouched_user_id = untouched_user.id
+
+    target_user.email = "updated-email@outlook.de"
+    updated_user = repository.update(user=target_user)
+
+    assert updated_user is target_user
+    assert updated_user.email == "updated-email@outlook.de"
+
+    db.expunge_all()
+
+    stored_user = db.get(Users, user_id)
+    stored_untouched_user = db.get(Users, untouched_user_id)
+
+    assert stored_user is not None
+    assert stored_user.email == "updated-email@outlook.de"
+
+    assert stored_untouched_user is not None
+    assert stored_untouched_user.email == "another-persons-email@outlook.de"
+
+
+def test_update_persists_changed_email(db: Session) -> None:
+    repository = UsersRepository(db=db)
+    user = repository.add(
+        Users(
+            email="valid-email@outlook.de",
+            hashed_password=hash_password(password="LongPassword123"),
+            user_role=UserRole.CUSTOMER,
+        )
+    )
+    user_id = user.id
+
+    user.email = "updated-email@outlook.de"
+    updated_user = repository.update(user=user)
+
+    assert updated_user is user
+    assert updated_user.email == "updated-email@outlook.de"
+
+    db.expunge_all()
+
+    stored_user = db.get(Users, user_id)
+
+    assert stored_user is not None
+    assert stored_user.email == "updated-email@outlook.de"
+
+
+def test_get_returns_target_user_when_multiple_users_exist(db: Session) -> None:
+
+    repository = UsersRepository(db=db)
+    target_user = repository.add(
+        Users(
+            email="valid-email@outlook.de",
+            hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
         )
     )
