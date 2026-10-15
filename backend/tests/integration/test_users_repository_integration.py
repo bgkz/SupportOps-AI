@@ -19,11 +19,13 @@ from backend.security.passwords import hash_password
 
 def test_update_rejects_null_email(db: Session) -> None:
     repository = UsersRepository(db=db)
+    old_timestamp = datetime(2020, 1, 1)
     user = repository.add(
         Users(
             email="original-email@outlook.de",
             hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
     user_id = user.id
@@ -42,15 +44,18 @@ def test_update_rejects_null_email(db: Session) -> None:
 
     assert stored_user is not None
     assert stored_user.email == "original-email@outlook.de"
+    assert stored_user.updated_at == old_timestamp
 
 
 def test_update_rejects_detached_user(db: Session) -> None:
     repository = UsersRepository(db=db)
+    old_timestamp = datetime(2020, 1, 1)
     user = repository.add(
         Users(
             email="original-email@outlook.de",
             hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
     user_id = user.id
@@ -67,16 +72,19 @@ def test_update_rejects_detached_user(db: Session) -> None:
 
     assert stored_user is not None
     assert stored_user.email == "original-email@outlook.de"
+    assert stored_user.updated_at == old_timestamp
 
 
 def test_update_rejects_duplicate_email(db: Session) -> None:
     repository = UsersRepository(db=db)
+    old_timestamp = datetime(2020, 1, 1)
     already_existing_email = "existing-email@outlook.de"
     repository.add(
         Users(
             email=already_existing_email,
             hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
 
@@ -85,6 +93,7 @@ def test_update_rejects_duplicate_email(db: Session) -> None:
             email="dummy-email@outlook.de",
             hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
 
@@ -107,17 +116,20 @@ def test_update_rejects_duplicate_email(db: Session) -> None:
 
     assert stored_user is not None
     assert stored_user.email == "dummy-email@outlook.de"
+    assert stored_user.updated_at == old_timestamp
 
 
 def test_update_changes_target_email_and_preserves_other_user_email(
     db: Session,
 ) -> None:
     repository = UsersRepository(db=db)
+    old_timestamp = datetime(2020, 1, 1)
     target_user = repository.add(
         Users(
             email="valid-email@outlook.de",
             hashed_password=hash_password(password="LongPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
 
@@ -126,6 +138,7 @@ def test_update_changes_target_email_and_preserves_other_user_email(
             email="another-persons-email@outlook.de",
             hashed_password=hash_password(password="AnotherPassword123"),
             user_role=UserRole.CUSTOMER,
+            updated_at=old_timestamp,
         )
     )
     user_id = target_user.id
@@ -136,6 +149,7 @@ def test_update_changes_target_email_and_preserves_other_user_email(
 
     assert updated_user is target_user
     assert updated_user.email == "updated-email@outlook.de"
+    assert updated_user.updated_at > old_timestamp
 
     db.expunge_all()
 
@@ -144,18 +158,23 @@ def test_update_changes_target_email_and_preserves_other_user_email(
 
     assert stored_user is not None
     assert stored_user.email == "updated-email@outlook.de"
+    assert stored_user.updated_at > old_timestamp
 
     assert stored_untouched_user is not None
     assert stored_untouched_user.email == "another-persons-email@outlook.de"
+    assert stored_untouched_user.updated_at == old_timestamp
 
 
 def test_update_persists_changed_email(db: Session) -> None:
     repository = UsersRepository(db=db)
+    old_timestamp = datetime(2020, 1, 1)
     user = repository.add(
         Users(
-            email="valid-email@outlook.de",
-            hashed_password=hash_password(password="LongPassword123"),
+            email="original-email@example.com",
+            hashed_password="fake-hash",
             user_role=UserRole.CUSTOMER,
+            created_at=old_timestamp,
+            updated_at=old_timestamp,
         )
     )
     user_id = user.id
@@ -166,12 +185,16 @@ def test_update_persists_changed_email(db: Session) -> None:
     assert updated_user is user
     assert updated_user.email == "updated-email@outlook.de"
 
+    assert updated_user.updated_at > old_timestamp
+    assert updated_user.created_at == old_timestamp
+
     db.expunge_all()
 
     stored_user = db.get(Users, user_id)
 
     assert stored_user is not None
     assert stored_user.email == "updated-email@outlook.de"
+    assert stored_user.updated_at > old_timestamp
 
 
 def test_get_returns_target_user_when_multiple_users_exist(db: Session) -> None:

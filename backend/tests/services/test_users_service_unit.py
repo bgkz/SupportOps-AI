@@ -12,8 +12,34 @@ from backend.exceptions.users import (
 )
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
-from backend.schemas.users import CreateUserRequest
+from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
 from backend.services.users_service import UsersService
+
+
+def test_change_email_updates_existing_user_and_returns_repository_result() -> None:
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    expected_email = "updated-email@example.com"
+    request = ChangeEmailRequest(email=expected_email)
+    repo = Mock(spec=UsersRepository)
+    existing_user = Users(
+        id=user_id,
+        user_role=UserRole.CUSTOMER,
+        email="test.user@example.com",
+        hashed_password="fake-hash",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    repo.get.return_value = existing_user
+
+    service = UsersService(users_repo=repo)
+
+    updated_user = service.change_email(user_id=user_id, new_email=request.email)
+
+    assert existing_user.email == expected_email
+    assert updated_user is repo.update.return_value
+
+    repo.get.assert_called_once_with(user_id)
+    repo.update.assert_called_once_with(user=existing_user)
 
 
 def test_get_user_propagates_repository_error() -> None:

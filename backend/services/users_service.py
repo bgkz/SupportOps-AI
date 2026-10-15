@@ -15,7 +15,7 @@ class UsersService:
 
     def change_email(self, user_id: UUID, new_email: EmailStr) -> Users:
         user = self.get_user(user_id=user_id)
-        user.email = new_email.strip()
+        user.email = new_email
 
         return self.users_repo.update(user=user)
 
