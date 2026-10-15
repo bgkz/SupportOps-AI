@@ -1,4 +1,5 @@
-from uuid import UUID
+from datetime import datetime
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.models.users import UserRole, Users
 from backend.schemas.users import UserResponse
-from backend.security.passwords import verify_password
+from backend.security.passwords import hash_password, verify_password
 
 
 @pytest.fixture(autouse=True)
@@ -17,6 +18,99 @@ def configure_test_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
         "backend.security.api_key.BACKEND_API_KEY",
         "test-api-key",
     )
+
+
+def test_get_user_returns_422_when_user_id_is_invalid(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        "/users/not-a-uuid",
+        headers={"X-API-Key": "test-api-key"},
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert any(
+        error["loc"] == ["path", "user_id"] and error["type"] == "uuid_parsing"
+        for error in response.json()["detail"]
+    )
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"X-API-Key": "wrong-api-key"},
+        {},
+    ],
+    ids=["invalid-api-key", "missing-api-key"],
+)
+def test_get_user_rejects_invalid_or_missing_api_key(
+    client: TestClient,
+    headers: dict[str, str],
+) -> None:
+    response = client.get(f"/users/{uuid4()}", headers=headers)
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json()["detail"] == "API-Key missing or invalid"
+
+
+def test_get_user_returns_404_when_user_not_found(
+    client: TestClient, db: Session
+) -> None:
+    existing_user = Users(
+        id=uuid4(),
+        user_role=UserRole.CUSTOMER,
+        email="test.user@example.com",
+        hashed_password=hash_password("TestPassword123!"),
+        created_at=datetime(2026, 1, 1, 12, 0, 0),
+        updated_at=datetime(2026, 1, 2, 14, 30, 0),
+    )
+    db.add(existing_user)
+    db.commit()
+
+    missing_user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+
+    response = client.get(
+        f"/users/{missing_user_id}",
+        headers={"X-API-Key": "test-api-key"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "User not found"
+
+
+def test_get_user_returns_expected_public_fields(
+    client: TestClient,
+    db: Session,
+) -> None:
+    expected_user = Users(
+        id=uuid4(),
+        user_role=UserRole.CUSTOMER,
+        email="test.user@example.com",
+        hashed_password=hash_password("TestPassword123!"),
+        created_at=datetime(2026, 1, 1, 12, 0, 0),
+        updated_at=datetime(2026, 1, 2, 14, 30, 0),
+    )
+    db.add(expected_user)
+    db.commit()
+
+    response = client.get(
+        f"/users/{expected_user.id}",
+        headers={"X-API-Key": "test-api-key"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+
+    data = response.json()
+    assert "password" not in data
+    assert "hashed_password" not in data
+
+    user_response = UserResponse.model_validate(data)
+
+    assert user_response.id == expected_user.id
+    assert user_response.user_role == expected_user.user_role
+    assert user_response.email == expected_user.email
+    assert user_response.created_at == expected_user.created_at
+    assert user_response.updated_at == expected_user.updated_at
 
 
 @pytest.mark.parametrize(
