@@ -18,25 +18,44 @@ from backend.repositories.users_repository import UsersRepository
 
 
 @pytest.mark.parametrize(
-    ("orig_exc", "expected_exception", "expected_message"),
+    ("orig_exc", "constraint_name", "expected_exception", "expected_message"),
     [
-        (UniqueViolation, EmailAlreadyExistError, "Email already exists"),
-        (Exception, UserUpdateError, "User could not be updated"),
+        (
+            UniqueViolation,
+            "users_email_key",
+            EmailAlreadyExistError,
+            "Email already exists",
+        ),
+        (UniqueViolation, "users_pkey", UserUpdateError, "User could not be updated"),
+        (UniqueViolation, None, UserUpdateError, "User could not be updated"),
+        (Exception, None, UserUpdateError, "User could not be updated"),
     ],
-    ids=["unique-violation", "other-integrity-error"],
+    ids=[
+        "email-unique-violation",
+        "other-unique-constraint",
+        "missing-constraint-name",
+        "other-integrity-error",
+    ],
 )
 @pytest.mark.parametrize("operation", ["flush", "commit"])
 def test_update_rolls_back_on_update_error(
     operation: str,
     orig_exc: type[Exception],
+    constraint_name: str | None,
     expected_exception: type[Exception],
     expected_message: str,
 ) -> None:
     db = Mock(spec=Session)
+    original_error = orig_exc("Update failed")
+    if isinstance(original_error, UniqueViolation) and constraint_name is not None:
+        original_error = UniqueViolation(
+            "Update failed",
+            info={ord("n"): constraint_name.encode()},
+        )
     error = IntegrityError(
         statement=None,
         params=None,
-        orig=orig_exc("Update failed"),
+        orig=original_error,
     )
     getattr(db, operation).side_effect = error
     repo = UsersRepository(db=db)

@@ -25,8 +25,12 @@ class UsersRepository:
             return user
         except IntegrityError as error:
             self.db.rollback()
-            if isinstance(error.orig, UniqueViolation):
+            if (
+                isinstance(error.orig, UniqueViolation)
+                and error.orig.diag.constraint_name == "users_email_key"
+            ):
                 raise EmailAlreadyExistError("Email already exists") from error
+
             raise UserUpdateError("User could not be updated") from error
         except SQLAlchemyError as error:
             self.db.rollback()
