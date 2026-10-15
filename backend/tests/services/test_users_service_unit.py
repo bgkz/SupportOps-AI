@@ -1,12 +1,67 @@
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
+from uuid import UUID
 
 import pytest
 
-from backend.exceptions.users import EmailAlreadyExistError, UserCreationError
-from backend.models.users import UserRole
+from backend.exceptions.users import (
+    EmailAlreadyExistError,
+    UserCreationError,
+    UserNotFoundError,
+    UserRetrievalError,
+)
+from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.schemas.users import CreateUserRequest
 from backend.services.users_service import UsersService
+
+
+def test_get_user_propagates_repository_error() -> None:
+    repo = Mock(spec=UsersRepository)
+    error = UserRetrievalError("User could not be retrieved")
+    repo.get.side_effect = error
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    service = UsersService(users_repo=repo)
+
+    with pytest.raises(
+        UserRetrievalError, match="User could not be retrieved"
+    ) as exc_info:
+        service.get_user(user_id=user_id)
+
+    assert exc_info.value is error
+    repo.get.assert_called_once_with(user_id)
+
+
+def test_get_user_raises_not_found_when_repository_returns_none() -> None:
+    repo = Mock(spec=UsersRepository)
+    repo.get.return_value = None
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    service = UsersService(users_repo=repo)
+
+    with pytest.raises(UserNotFoundError, match="User not found"):
+        service.get_user(user_id=user_id)
+
+    repo.get.assert_called_once_with(user_id)
+
+
+def test_get_user_returns_user_from_repository() -> None:
+    repo = Mock(spec=UsersRepository)
+
+    expected_user = Users(
+        id=UUID("550e8400-e29b-41d4-a716-446655440000"),
+        user_role=UserRole.CUSTOMER,
+        email="test.user@example.com",
+        hashed_password="fake-hash",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    repo.get.return_value = expected_user
+    service = UsersService(users_repo=repo)
+    user_found = service.get_user(user_id=expected_user.id)
+
+    assert user_found is expected_user
+    repo.get.assert_called_once_with(expected_user.id)
 
 
 @pytest.mark.parametrize(

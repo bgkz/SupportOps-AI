@@ -12,7 +12,7 @@ class CreateUserRequest(BaseModel):
     password: SecretStr = Field(min_length=PASSWORD_MIN_LENGTH)
 
 
-class CreateUserResponse(BaseModel):
+class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
