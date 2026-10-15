@@ -19,13 +19,15 @@ class UsersRepository:
 
     def update(self, user: Users) -> Users:
         try:
-            self.db.commit()
+            self.db.flush()
             self.db.refresh(user)
+            self.db.commit()
             return user
         except IntegrityError as error:
             self.db.rollback()
             if isinstance(error.orig, UniqueViolation):
                 raise EmailAlreadyExistError("Email already exists") from error
+            raise UserUpdateError("User could not be updated") from error
         except SQLAlchemyError as error:
             self.db.rollback()
             raise UserUpdateError("User could not be updated") from error
