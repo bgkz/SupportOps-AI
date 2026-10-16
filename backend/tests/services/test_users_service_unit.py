@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from unittest.mock import Mock, patch
+from unittest.mock import DEFAULT, Mock, create_autospec, patch
 from uuid import UUID
 
 import pytest
@@ -28,7 +28,7 @@ def test_change_email_propagates_update_errors(
     exception: type[Exception], exception_msg: str
 ) -> None:
     user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    repo = Mock(spec=UsersRepository)
+    repo = create_autospec(UsersRepository, instance=True)
     existing_user = Users(
         id=user_id,
         user_role=UserRole.CUSTOMER,
@@ -55,7 +55,7 @@ def test_change_email_propagates_update_errors(
 
 def test_change_email_propagates_user_retrieval_error() -> None:
     user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    repo = Mock(spec=UsersRepository)
+    repo = create_autospec(UsersRepository, instance=True)
     error = UserRetrievalError("User could not be retrieved")
     repo.get.side_effect = error
     service = UsersService(users_repo=repo)
@@ -75,7 +75,7 @@ def test_change_email_propagates_user_retrieval_error() -> None:
 
 def test_change_email_raises_not_found_for_unknown_user() -> None:
     user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
-    repo = Mock(spec=UsersRepository)
+    repo = create_autospec(UsersRepository, instance=True)
     repo.get.return_value = None
     service = UsersService(users_repo=repo)
 
@@ -92,7 +92,7 @@ def test_change_email_updates_existing_user_and_returns_repository_result() -> N
     user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
     expected_email = "updated-email@example.com"
     request = ChangeEmailRequest(email=expected_email)
-    repo = Mock(spec=UsersRepository)
+    repo = create_autospec(UsersRepository, instance=True)
     existing_user = Users(
         id=user_id,
         user_role=UserRole.CUSTOMER,
@@ -102,6 +102,13 @@ def test_change_email_updates_existing_user_and_returns_repository_result() -> N
         updated_at=datetime.now(UTC),
     )
     repo.get.return_value = existing_user
+
+    def check_update(*, user: Users) -> object:
+        assert user is existing_user
+        assert user.email == expected_email
+        return DEFAULT
+
+    repo.update.side_effect = check_update
 
     service = UsersService(users_repo=repo)
 

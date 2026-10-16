@@ -1,7 +1,5 @@
 from uuid import UUID
 
-from pydantic import EmailStr
-
 from backend.exceptions.users import UserNotFoundError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
