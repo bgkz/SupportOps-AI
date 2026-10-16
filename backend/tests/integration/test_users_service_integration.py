@@ -2,14 +2,142 @@ from datetime import datetime
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.dependencies.users import get_users_service
 from backend.exceptions.users import EmailAlreadyExistError, UserNotFoundError
 from backend.models.users import UserRole, Users
-from backend.schemas.users import CreateUserRequest
+from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
 from backend.security.passwords import hash_password, verify_password
+
+
+def test_change_email_with_invalid_email(db: Session) -> None:
+    service = get_users_service(db=db)
+    old_timestamp = datetime(2020, 1, 1)
+    hashed = hash_password("LongPassword123")
+    user_id = UUID("b72f409e-6c83-4d15-9a20-e8f153c067bd")
+    db.add(
+        Users(
+            id=user_id,
+            email="valid-email@outlook.de",
+            hashed_password=hashed,
+            user_role=UserRole.CUSTOMER,
+            created_at=old_timestamp,
+            updated_at=old_timestamp,
+        ),
+    )
+
+    db.flush()
+    db.commit()
+
+    with pytest.raises(ValidationError):
+        user_updated = service.change_email(
+            user_id=user_id, request=ChangeEmailRequest(email="")
+        )
+
+    db.expunge_all()
+
+
+def test_change_email_raises_not_found_for_unknown_id(db: Session) -> None:
+    with pytest.raises(UserNotFoundError, match="User not found"):
+        get_users_service(db=db).change_email(
+            user_id=UUID("b72f409e-6c83-4d15-9a20-e8f153c067bd"),
+            request=ChangeEmailRequest(email="example@example.com"),
+        )
+
+
+def test_change_email_rejects_duplicate_email(db: Session) -> None:
+    service = get_users_service(db=db)
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    old_timestamp = datetime(2020, 1, 1)
+    hashed = hash_password("LongPassword123")
+
+    another_user_id = UUID("b72f409e-6c83-4d15-9a20-e8f153c067bd")
+    another_user_hashed = hash_password("AnotherPassword123")
+
+    db.add_all(
+        [
+            Users(
+                id=user_id,
+                email="valid-email@outlook.de",
+                hashed_password=hashed,
+                user_role=UserRole.CUSTOMER,
+                created_at=old_timestamp,
+                updated_at=old_timestamp,
+            ),
+            Users(
+                id=another_user_id,
+                email="another-email@outlook.de",
+                hashed_password=another_user_hashed,
+                user_role=UserRole.CUSTOMER,
+                created_at=old_timestamp,
+                updated_at=old_timestamp,
+            ),
+        ]
+    )
+    db.commit()
+
+    with pytest.raises(EmailAlreadyExistError, match="Email already exists"):
+        service.change_email(
+            user_id=user_id,
+            request=ChangeEmailRequest(email="another-email@outlook.de"),
+        )
+
+    db.expunge_all()
+
+    untouched_user = db.get(Users, user_id)
+
+    assert untouched_user is not None
+    assert untouched_user.email == "valid-email@outlook.de"
+    assert untouched_user.updated_at == old_timestamp
+
+    other_user = db.get(Users, another_user_id)
+
+    assert other_user is not None
+    assert other_user.email == "another-email@outlook.de"
+    assert other_user.updated_at == old_timestamp
+
+
+def test_change_email_persists_email_and_preserves_other_fields(db: Session) -> None:
+    service = get_users_service(db=db)
+    user_id = UUID("550e8400-e29b-41d4-a716-446655440000")
+    old_timestamp = datetime(2020, 1, 1)
+    hashed = hash_password("LongPassword123")
+
+    db.add(
+        Users(
+            id=user_id,
+            email="valid-email@outlook.de",
+            hashed_password=hashed,
+            user_role=UserRole.CUSTOMER,
+            created_at=old_timestamp,
+            updated_at=old_timestamp,
+        )
+    )
+    db.flush()
+    db.expunge_all()
+
+    changed_user = service.change_email(
+        user_id=user_id,
+        request=ChangeEmailRequest(email="changed-email@example.com"),
+    )
+
+    assert changed_user.id == user_id
+    assert changed_user.email == "changed-email@example.com"
+
+    db.flush()
+    db.expunge_all()
+
+    persisted_user = db.get(Users, user_id)
+
+    assert persisted_user is not None
+    assert persisted_user.email == "changed-email@example.com"
+    assert persisted_user.hashed_password == hashed
+    assert persisted_user.user_role == UserRole.CUSTOMER
+    assert persisted_user.created_at == old_timestamp
+    assert persisted_user.updated_at > old_timestamp
 
 
 def test_get_user_raises_not_found_for_unknown_id(db: Session) -> None:

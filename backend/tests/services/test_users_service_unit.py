@@ -44,7 +44,9 @@ def test_change_email_propagates_update_errors(
     service = UsersService(users_repo=repo)
 
     with pytest.raises(exception, match=exception_msg) as exc_info:
-        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+        service.change_email(
+            user_id=user_id, request=ChangeEmailRequest(email="test-email@mail.de")
+        )
 
     assert exc_info.value is error
     repo.get.assert_called_once_with(user_id)
@@ -61,7 +63,9 @@ def test_change_email_propagates_user_retrieval_error() -> None:
     with pytest.raises(
         UserRetrievalError, match="User could not be retrieved"
     ) as exc_info:
-        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+        service.change_email(
+            user_id=user_id, request=ChangeEmailRequest(email="test-email@mail.de")
+        )
 
     assert exc_info.value is error
 
@@ -76,7 +80,9 @@ def test_change_email_raises_not_found_for_unknown_user() -> None:
     service = UsersService(users_repo=repo)
 
     with pytest.raises(UserNotFoundError, match="User not found"):
-        service.change_email(user_id=user_id, new_email="test-email@mail.de")
+        service.change_email(
+            user_id=user_id, request=ChangeEmailRequest(email="test-email@mail.de")
+        )
 
     repo.get.assert_called_once_with(user_id)
     repo.update.assert_not_called()
@@ -99,7 +105,7 @@ def test_change_email_updates_existing_user_and_returns_repository_result() -> N
 
     service = UsersService(users_repo=repo)
 
-    updated_user = service.change_email(user_id=user_id, new_email=request.email)
+    updated_user = service.change_email(user_id=user_id, request=request)
 
     assert existing_user.email == expected_email
     assert updated_user is repo.update.return_value
