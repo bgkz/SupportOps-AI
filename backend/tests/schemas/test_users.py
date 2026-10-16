@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from backend.config import PASSWORD_MIN_LENGTH
 from backend.models.users import UserRole, Users
-from backend.schemas.users import CreateUserRequest, UserResponse
+from backend.schemas.users import ChangeEmailRequest, CreateUserRequest, UserResponse
 
 VALID_TEST_PASSWORD = "langes-passwort-123"
 VALID_TEST_EMAIL = "example_email@outlook.com"
@@ -14,6 +14,14 @@ VALID_TEST_EMAIL = "example_email@outlook.com"
 TEST_USER_ID = UUID("550e8400-e29b-41d4-a716-446655440000")
 TEST_CREATED_AT = datetime(2026, 10, 13, 10, 30, 0)
 TEST_UPDATED_AT = datetime(2026, 10, 13, 11, 45, 0)
+
+
+@pytest.mark.parametrize("email", ["", "   ", "invalid", "user@"])
+def test_change_email_request_rejects_invalid_email(email: str) -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        ChangeEmailRequest(email=email)
+
+    assert any(error["loc"] == ("email",) for error in exc_info.value.errors())
 
 
 def test_create_user_response_from_json() -> None:
