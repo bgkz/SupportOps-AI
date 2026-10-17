@@ -12,3 +12,7 @@ class UserRetrievalError(Exception):
 
 class UserNotFoundError(Exception):
     pass
+
+
+class UserUpdateError(Exception):
+    pass

@@ -8,8 +8,9 @@ from backend.exceptions.users import (
     UserCreationError,
     UserNotFoundError,
     UserRetrievalError,
+    UserUpdateError,
 )
-from backend.schemas.users import CreateUserRequest, UserResponse
+from backend.schemas.users import ChangeEmailRequest, CreateUserRequest, UserResponse
 from backend.security.api_key import verify_api_key
 from backend.services.users_service import UsersService
 
@@ -55,9 +56,25 @@ def create_user(
         ) from error
 
 
-@router.patch("/{user_id}")
-def change_user(user_id: UUID):
-    pass
+@router.patch(
+    "/{user_id}/email", response_model=UserResponse, status_code=status.HTTP_200_OK
+)
+def change_email(
+    user_id: UUID,
+    change_email_request: ChangeEmailRequest,
+    users_service: UsersService = Depends(get_users_service),  # noqa: B008
+):
+    try:
+        return users_service.change_email(user_id=user_id, request=change_email_request)
+    except UserNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except UserUpdateError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+    except EmailAlreadyExistError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
 
 
 @router.delete("/{user_id}")

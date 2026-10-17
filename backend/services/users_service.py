@@ -3,13 +3,18 @@ from uuid import UUID
 from backend.exceptions.users import UserNotFoundError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
-from backend.schemas.users import CreateUserRequest
+from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
 from backend.security.passwords import hash_password
 
 
 class UsersService:
     def __init__(self, users_repo: UsersRepository):
         self.users_repo = users_repo
+
+    def change_email(self, user_id: UUID, request: ChangeEmailRequest) -> Users:
+        user = self.get_user(user_id=user_id)
+        user.email = str(request.email)
+        return self.users_repo.update(user=user)
 
     def get_user(self, user_id: UUID) -> Users:
         user_found = self.users_repo.get(user_id)
