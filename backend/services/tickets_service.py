@@ -1,35 +1,55 @@
 from uuid import UUID
 
-from backend.exceptions.tickets import IdempotencyConflictError
+from backend.exceptions.tickets import (
+    DuplicateIdempotencyKeyError,
+    IdempotencyConflictError,
+    TicketCreationError,
+)
 from backend.models.tickets import Tickets
 from backend.repositories.tickets_repository import TicketsRepository
 from backend.schemas.tickets import CreateTicketRequest
+from backend.services.users_service import UsersService
 
 
 class TicketsService:
-    def __init__(self, tickets_repository: TicketsRepository):
+    def __init__(
+        self, tickets_repository: TicketsRepository, users_service: UsersService
+    ):
         self.tickets_repo = tickets_repository
+        self.users_service = users_service
 
     def create_ticket(
         self, request: CreateTicketRequest, idempotency_key: UUID
     ) -> Tickets:
+        self.users_service.get_user(user_id=request.user_id)
         existing_ticket = self.tickets_repo.get_by_idempotency_key(
             user_id=request.user_id,
             idempotency_key=idempotency_key,
         )
 
         if existing_ticket is not None:
-            if existing_ticket.text != request.text:
-                raise IdempotencyConflictError(
-                    "Idempotency key already used with a different request"
+            return self._validate_replay(existing_ticket, request)
+
+        try:
+            return self.tickets_repo.add(
+                Tickets(
+                    user_id=request.user_id,
+                    text=request.text,
+                    idempotency_key=idempotency_key,
                 )
-
-            return existing_ticket
-
-        return self.tickets_repo.add(
-            Tickets(
-                user_id=request.user_id,
-                text=request.text,
-                idempotency_key=idempotency_key,
             )
-        )
+        except DuplicateIdempotencyKeyError as error:
+            existing_ticket = self.tickets_repo.get_by_idempotency_key(
+                user_id=request.user_id, idempotency_key=idempotency_key
+            )
+            if existing_ticket is None:
+                raise TicketCreationError("Ticket could not be created") from error
+            return self._validate_replay(existing_ticket, request)
+
+    @staticmethod
+    def _validate_replay(ticket: Tickets, request: CreateTicketRequest) -> Tickets:
+        if ticket.text != request.text:
+            raise IdempotencyConflictError(
+                "Idempotency key already used with a different request"
+            )
+        return ticket
