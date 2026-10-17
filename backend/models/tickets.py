@@ -31,6 +31,11 @@ class Tickets(Base):
             "char_length(text) BETWEEN 10 AND 1000",
             name="ck_tickets_text_length",
         ),
+        sa.UniqueConstraint(
+            "user_id",
+            "idempotency_key",
+            name="uq_tickets_user_id_idempotency_key",
+        ),
     )
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
@@ -60,3 +65,5 @@ class Tickets(Base):
     updated_at: Mapped[datetime] = mapped_column(
         nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()
     )
+
+    idempotency_key: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
