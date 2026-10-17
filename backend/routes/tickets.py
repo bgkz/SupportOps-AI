@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from backend.schemas.tickets import CreateTicketRequest
 from backend.security.api_key import verify_api_key

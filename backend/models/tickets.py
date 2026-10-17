@@ -16,17 +16,41 @@ class TicketCategories(Enum):
     TECHNICAL_FAQ = "technical_faq"
 
 
+class TicketStatus(Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    WAITING_FOR_APPROVAL = "waiting_for_approval"
+    RESOLVED = "resolved"
+    ESCALATED = "escalated"
+
+
 class Tickets(Base):
     __tablename__ = "tickets"
+    __table_args__ = (
+        sa.CheckConstraint(
+            "char_length(text) BETWEEN 10 AND 1000",
+            name="ck_tickets_text_length",
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         default=uuid.uuid4,
     )
 
-    user_role: Mapped[TicketCategories] = mapped_column(nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("users.id"),
+        nullable=False,
+    )
 
-    email: Mapped[str] = mapped_column(unique=True)
-    hashed_password: Mapped[str] = mapped_column(nullable=False)
+    text: Mapped[str] = mapped_column(sa.Text, nullable=False)
+
+    category: Mapped[TicketCategories | None] = mapped_column(nullable=True)
+
+    status: Mapped[TicketStatus] = mapped_column(
+        nullable=False,
+        default=TicketStatus.PENDING,
+        server_default=TicketStatus.PENDING.name,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
