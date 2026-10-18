@@ -10,6 +10,7 @@ from backend.exceptions.tickets import (
     TicketRetrievalError,
 )
 from backend.exceptions.users import UserNotFoundError, UserRetrievalError
+from backend.queue import job
 from backend.schemas.tickets import CreateTicketRequest, TicketResponse
 from backend.security.api_key import verify_api_key
 from backend.services.tickets_service import TicketsService
