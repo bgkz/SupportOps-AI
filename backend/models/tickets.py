@@ -5,6 +5,7 @@ from enum import Enum
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
+from backend.config import ORDER_NUMBER_MAX_LENGTH
 from backend.database import Base
 
 
@@ -46,7 +47,9 @@ class Tickets(Base):
         sa.ForeignKey("users.id"),
         nullable=False,
     )
-    order_number: Mapped[str | None] = mapped_column(nullable=True)
+    order_number: Mapped[str | None] = mapped_column(
+        sa.String(ORDER_NUMBER_MAX_LENGTH), nullable=True
+    )
 
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
 

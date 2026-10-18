@@ -3,7 +3,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.config import TICKET_TEXT_MAX_LENGTH, TICKET_TEXT_MIN_LENGTH
+from backend.config import (
+    TICKET_TEXT_MAX_LENGTH,
+    TICKET_TEXT_MIN_LENGTH,
+)
 from backend.models.tickets import TicketCategories, TicketStatus
 
 
@@ -18,7 +21,7 @@ class TicketResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     user_id: UUID
-    order_number: str | None
+    order_number: str | None = None
     text: str
     category: TicketCategories | None
     status: TicketStatus
