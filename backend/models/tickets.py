@@ -46,6 +46,7 @@ class Tickets(Base):
         sa.ForeignKey("users.id"),
         nullable=False,
     )
+    order_number: Mapped[str | None] = mapped_column(nullable=True)
 
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
 

@@ -18,6 +18,7 @@ class TicketResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     user_id: UUID
+    order_number: str | None
     text: str
     category: TicketCategories | None
     status: TicketStatus
