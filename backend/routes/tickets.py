@@ -35,12 +35,12 @@ def create_ticket(
     except TicketCreationError as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ticket could not be created",
+            detail=str(error),
         ) from error
     except (TicketRetrievalError, UserRetrievalError) as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Ticket creation could not be completed",
+            detail=str(error),
         ) from error
 
     except UserNotFoundError as error:
