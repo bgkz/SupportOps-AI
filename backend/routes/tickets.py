@@ -10,6 +10,7 @@ from backend.exceptions.tickets import (
     TicketRetrievalError,
 )
 from backend.exceptions.users import UserNotFoundError, UserRetrievalError
+from backend.jobs import process_ticket
 from backend.queue import job
 from backend.schemas.tickets import CreateTicketRequest, TicketResponse
 from backend.security.api_key import verify_api_key
@@ -28,10 +29,14 @@ def create_ticket(
     tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
 ):
     try:
-        return tickets_service.create_ticket(
+        result = tickets_service.create_ticket(
             request=create_ticket_request,
             idempotency_key=idempotency_key,
         )
+        if result.created:
+            job.enqueue(process_ticket, result.ticket.id)
+
+        return result.ticket
 
     except TicketCreationError as error:
         raise HTTPException(

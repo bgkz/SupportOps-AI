@@ -12,3 +12,7 @@ class DuplicateIdempotencyKeyError(Exception):
 
 class IdempotencyConflictError(Exception):
     pass
+
+
+class TicketClassificationError(Exception):
+    pass
