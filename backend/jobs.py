@@ -21,7 +21,7 @@ from backend.exceptions.orders import OrderNotFoundError
 from backend.exceptions.tickets import TicketRetrievalError
 from backend.models.orders import Orders
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
-from backend.models.users import Users
+from backend.models.users import Users  # noqa: F401
 from backend.repositories.orders_repository import OrdersRepository
 from backend.schemas.tickets import ReplyDraft
 from backend.services.llm_instructions import INSTRUCTIONS
