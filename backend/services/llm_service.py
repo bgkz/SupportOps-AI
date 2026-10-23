@@ -1,6 +1,6 @@
-from backend.schemas.tickets import ReplyDraft
-
 from openai import OpenAI
+
+from backend.schemas.tickets import ReplyDraft
 
 
 class LLMService:
@@ -29,5 +29,7 @@ class LLMService:
             text_format=ReplyDraft,
         )
         if response.status != "completed" or response.output_parsed is None:
-            raise ValueError("Das Modell hat keinen vollst?ndigen Antwortentwurf geliefert.")
+            raise ValueError(
+                "Das Modell hat keinen vollst?ndigen Antwortentwurf geliefert."
+            )
         return response.output_parsed
