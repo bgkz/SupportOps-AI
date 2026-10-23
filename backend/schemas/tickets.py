@@ -26,5 +26,17 @@ class TicketResponse(BaseModel):
     category: TicketCategories | None
     status: TicketStatus
 
+    reply_draft: dict | None = None
+    knowledge_sources: list[dict] | None = None
+    review_reason: str | None = None
+
     created_at: datetime
     updated_at: datetime
+
+
+class ReplyDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reply_text: str = Field(min_length=1)
+    source_ids: list[str]
+    needs_manual_review: bool

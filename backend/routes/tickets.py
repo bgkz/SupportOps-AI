@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from backend.dependencies.tickets import get_tickets_service
+from backend.exceptions.orders import OrderRetrievalError
 from backend.exceptions.tickets import (
     IdempotencyConflictError,
     TicketCreationError,
@@ -43,7 +44,7 @@ def create_ticket(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(error),
         ) from error
-    except (TicketRetrievalError, UserRetrievalError) as error:
+    except (TicketRetrievalError, UserRetrievalError, OrderRetrievalError) as error:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(error),

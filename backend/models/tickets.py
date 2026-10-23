@@ -53,6 +53,10 @@ class Tickets(Base):
 
     text: Mapped[str] = mapped_column(sa.Text, nullable=False)
 
+    reply_draft: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
+    knowledge_sources: Mapped[list[dict] | None] = mapped_column(sa.JSON, nullable=True)
+    review_reason: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
+
     category: Mapped[TicketCategories | None] = mapped_column(nullable=True)
 
     status: Mapped[TicketStatus] = mapped_column(

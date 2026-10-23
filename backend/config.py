@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY")
 BASE_BACKEND_URL = "http://127.0.0.1:8000/"
@@ -23,3 +24,10 @@ TICKET_TEXT_MAX_LENGTH = 1000
 
 ORDER_NUMBER_MAX_LENGTH = 10
 PASSWORD_MIN_LENGTH = 12
+
+
+QDRANT_CLIENT_URL = "http://localhost:6333"
+QDRANT_COLLECTION_NAME = "support_knowledge"
+
+
+GPT_MODEL = "gpt-6-luna"
