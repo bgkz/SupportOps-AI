@@ -6,7 +6,7 @@ import sys
 from rq import SimpleWorker, Worker
 from rq.timeouts import TimerDeathPenalty
 
-from backend.queue import job, redis_connection
+from backend.redis_queue import job, redis_connection
 
 
 class WindowsWorker(SimpleWorker):
