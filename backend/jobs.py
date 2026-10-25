@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import logging
 from functools import lru_cache
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from langgraph.checkpoint.postgres import PostgresSaver
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
 
 from backend.config import (
     DATABASE_URL,
@@ -14,16 +15,17 @@ from backend.database import SessionLocal
 from backend.exceptions.tickets import TicketRetrievalError
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
 from backend.models.users import Users  # noqa: F401
-from backend.services.ticket_classification_service import (
-    TicketClassificationService,
-)
-from backend.workflows.ticket_workflow import TicketWorkflow
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
 def get_embedding_model() -> SentenceTransformer:
+    from sentence_transformers import SentenceTransformer
+
     return SentenceTransformer(
         "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
@@ -81,6 +83,11 @@ def process_ticket(ticket_id: UUID) -> None:
     ticket = get_ticket(ticket_id)
     if ticket.status != TicketStatus.PENDING:
         return
+
+    from langgraph.checkpoint.postgres import PostgresSaver
+
+    from backend.services.ticket_classification_service import TicketClassificationService
+    from backend.workflows.ticket_workflow import TicketWorkflow
 
     client = QdrantClient(url=QDRANT_CLIENT_URL)
     postgres_url = DATABASE_URL.replace(

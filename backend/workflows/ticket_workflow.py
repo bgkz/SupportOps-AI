@@ -1,4 +1,6 @@
-from typing import TypedDict
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypedDict
 from uuid import UUID
 
 from langgraph.checkpoint.postgres import PostgresSaver
@@ -6,7 +8,6 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, interrupt
 from openai import OpenAIError
 from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
 
 from backend.config import (
     QDRANT_COLLECTION_NAME,
@@ -19,6 +20,9 @@ from backend.services.ticket_classification_service import (
     TicketClassificationService,
 )
 from backend.services.ticket_processing_service import generate_reply_draft, get_order
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 
 class TicketState(TypedDict):
