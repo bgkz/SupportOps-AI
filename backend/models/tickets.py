@@ -75,3 +75,8 @@ class Tickets(Base):
     )
 
     idempotency_key: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+
+    approved: Mapped[bool | None] = mapped_column(
+        sa.Boolean,
+        nullable=True,
+    )

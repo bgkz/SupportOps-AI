@@ -1,8 +1,9 @@
 from typing import TypedDict
 from uuid import UUID
 
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, interrupt
 from openai import OpenAIError
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
@@ -176,11 +177,22 @@ class TicketWorkflow:
                 "review_reason": f"generate_reply_draft {error}",
             }
 
+    def approval_node(self, state: TicketState) -> dict:
+        approved = interrupt({"reply_draft": state["reply_draft"]})
+        return {"approved": approved}
+
+    def resume(self, ticket_id: UUID, approved: bool):
+        return self.routing_graph.invoke(
+            Command(resume=approved),
+            config={"configurable": {"thread_id": str(ticket_id)}},
+        )
+
     def __init__(
         self,
         ticket_classification_service: TicketClassificationService,
         sentence_transformer_model: SentenceTransformer,
         qdrant_client: QdrantClient,
+        checkpointer: PostgresSaver,
     ) -> None:
         self.ticket_classification_service = ticket_classification_service
         self.sentence_transformer_model = sentence_transformer_model
@@ -196,6 +208,7 @@ class TicketWorkflow:
         self.routing_builder.add_node("embed_ticket_text", self.embed_ticket_text_node)
         self.routing_builder.add_node("search_knowledge", self.search_knowledge_node)
         self.routing_builder.add_node("generate_draft", self.generate_draft_node)
+        self.routing_builder.add_node("approval", self.approval_node)
 
         self.routing_builder.add_conditional_edges(
             "classify_ticket",
@@ -225,9 +238,18 @@ class TicketWorkflow:
         self.routing_builder.add_edge(START, "classify_ticket")
         self.routing_builder.add_edge("manual_review", END)
         self.routing_builder.add_edge("continue_processing", "check_order")
-        self.routing_builder.add_edge("generate_draft", END)
+        self.routing_builder.add_edge("approval", END)
 
-        self.routing_graph = self.routing_builder.compile(checkpointer=InMemorySaver())
+        self.routing_builder.add_conditional_edges(
+            "generate_draft",
+            lambda state: "approval" if state["reply_draft"] is not None else "review",
+            {
+                "approval": "approval",
+                "review": "manual_review",
+            },
+        )
+
+        self.routing_graph = self.routing_builder.compile(checkpointer=checkpointer)
 
     def start(self, ticket: Tickets):
         return self.routing_graph.invoke(

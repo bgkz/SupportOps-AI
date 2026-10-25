@@ -2,10 +2,12 @@ import logging
 from functools import lru_cache
 from uuid import UUID
 
+from langgraph.checkpoint.postgres import PostgresSaver
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
 from backend.config import (
+    DATABASE_URL,
     QDRANT_CLIENT_URL,
 )
 from backend.database import SessionLocal
@@ -55,19 +57,52 @@ def update_ticket(ticket: Tickets) -> Tickets:
         return stored
 
 
+def save_ticket_approval(ticket_id: UUID, approved: bool) -> Tickets:
+    with SessionLocal.begin() as db:
+        ticket = db.get(Tickets, ticket_id, with_for_update=True)
+
+        if ticket is None:
+            raise TicketRetrievalError(f"Ticket {ticket_id} wurde nicht gefunden.")
+
+        if ticket.status != TicketStatus.WAITING_FOR_APPROVAL:
+            raise ValueError("Das Ticket wartet nicht auf Freigabe.")
+
+        if ticket.reply_draft is None:
+            raise ValueError("Es gibt keinen Antwortentwurf zur Freigabe.")
+
+        if ticket.approved is not None and ticket.approved != approved:
+            raise ValueError("Eine andere Entscheidung wurde bereits gespeichert.")
+
+        ticket.approved = approved
+        return ticket
+
+
 def process_ticket(ticket_id: UUID) -> None:
     ticket = get_ticket(ticket_id)
     if ticket.status != TicketStatus.PENDING:
         return
 
     client = QdrantClient(url=QDRANT_CLIENT_URL)
+    postgres_url = DATABASE_URL.replace(
+        "postgresql+psycopg://",
+        "postgresql://",
+        1,
+    )
     try:
-        workflow = TicketWorkflow(
-            ticket_classification_service=TicketClassificationService(),
-            sentence_transformer_model=get_embedding_model(),
-            qdrant_client=client,
-        )
-        result = workflow.start(ticket)
+        with PostgresSaver.from_conn_string(postgres_url) as checkpointer:
+            checkpointer.setup()
+
+            workflow = TicketWorkflow(
+                ticket_classification_service=TicketClassificationService(),
+                sentence_transformer_model=get_embedding_model(),
+                qdrant_client=client,
+                checkpointer=checkpointer,
+            )
+            result = workflow.start(ticket)
+            snapshot = workflow.routing_graph.get_state(
+                {"configurable": {"thread_id": str(ticket.id)}}
+            )
+            print("Nächster Schritt:", snapshot.next)
     finally:
         client.close()
 
@@ -77,5 +112,6 @@ def process_ticket(ticket_id: UUID) -> None:
     ticket.reply_draft = result["reply_draft"]
     ticket.knowledge_sources = result["sources"]
     ticket.review_reason = result["review_reason"]
+    ticket.approved = result["approved"]
 
     update_ticket(ticket)
