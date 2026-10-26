@@ -5,8 +5,170 @@ import pytest
 from sqlalchemy.orm import Session
 
 from backend.exceptions.tickets import TicketRetrievalError
-from backend.jobs import process_ticket, save_ticket_approval
+from backend.jobs import (
+    get_embedding_model,
+    get_ticket,
+    process_ticket,
+    save_ticket_approval,
+    update_ticket,
+)
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
+
+
+def test_get_embedding_model() -> None:
+    get_embedding_model.cache_clear()
+
+    try:
+        with patch("sentence_transformers.SentenceTransformer") as mock_constructor:
+            model = get_embedding_model()
+            cached_model = get_embedding_model()
+
+        mock_constructor.assert_called_once_with(
+            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        )
+        assert model is mock_constructor.return_value
+        assert cached_model is model
+    finally:
+        get_embedding_model.cache_clear()
+
+
+def test_get_ticket_propagates_session_enter_error() -> None:
+    ticket_id = uuid4()
+    db = Mock(spec=Session)
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+        mock_begin.return_value.__enter__.side_effect = RuntimeError(
+            "Datenbankverbindung fehlgeschlagen"
+        )
+
+        with pytest.raises(RuntimeError, match="Datenbankverbindung fehlgeschlagen"):
+            get_ticket(ticket_id=ticket_id)
+
+    db.get.assert_not_called()
+
+
+def test_get_ticket_raises_error_when_ticket_not_found() -> None:
+    ticket_id = uuid4()
+    db = Mock(spec=Session)
+    db.get.return_value = None
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        with pytest.raises(TicketRetrievalError, match="wurde nicht gefunden"):
+            get_ticket(ticket_id=ticket_id)
+
+    db.get.assert_called_once_with(Tickets, ticket_id)
+
+
+def test_get_ticket_returns_ticket() -> None:
+    ticket_id = uuid4()
+    ticket = Tickets(
+        id=ticket_id,
+        user_id=uuid4(),
+        text="Test Ticket",
+    )
+
+    db = Mock(spec=Session)
+    db.get.return_value = ticket
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        result = get_ticket(ticket_id=ticket_id)
+
+    assert result is ticket
+    db.get.assert_called_once_with(Tickets, ticket_id)
+
+
+@pytest.mark.parametrize(
+    "ticket_status",
+    [
+        TicketStatus.WAITING_FOR_APPROVAL,
+        TicketStatus.ESCALATED,
+        TicketStatus.PROCESSING,
+        TicketStatus.RESOLVED,
+    ],
+)
+def test_update_ticket_keeps_non_pending_ticket_unchanged(
+    ticket_status: TicketStatus,
+) -> None:
+    ticket_id = uuid4()
+    stored = Tickets(
+        id=ticket_id,
+        status=ticket_status,
+        reply_draft={"reply_text": "Bestehende Antwort"},
+    )
+    ticket = Tickets(
+        id=ticket_id,
+        status=TicketStatus.WAITING_FOR_APPROVAL,
+        reply_draft={"reply_text": "Neue Antwort"},
+    )
+
+    db = Mock(spec=Session)
+    db.get.return_value = stored
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        result = update_ticket(ticket)
+
+    assert result is stored
+    assert stored.status is ticket_status
+    assert stored.reply_draft == {"reply_text": "Bestehende Antwort"}
+    db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
+
+
+def test_update_ticket_raises_error_when_ticket_not_found() -> None:
+    db = Mock(spec=Session)
+    db.get.return_value = None
+
+    ticket = Tickets(id=uuid4())
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        with pytest.raises(TicketRetrievalError, match="wurde nicht gefunden"):
+            update_ticket(ticket=ticket)
+
+    db.get.assert_called_once_with(Tickets, ticket.id, with_for_update=True)
+
+
+@pytest.mark.parametrize("review_reason", ["draft_requires_review", None])
+def test_update_ticket_copies_workflow_fields(review_reason: str | None) -> None:
+    ticket_id = uuid4()
+    stored = Tickets(
+        id=ticket_id,
+        status=TicketStatus.PENDING,
+        review_reason="alter Grund",
+    )
+    ticket = Tickets(
+        id=ticket_id,
+        category=TicketCategories.DAMAGED_GOODS,
+        status=TicketStatus.WAITING_FOR_APPROVAL,
+        order_number="AB-0042",
+        reply_draft={"reply_text": "Bitte senden Sie uns Fotos."},
+        knowledge_sources=[{"id": "source-1"}],
+        review_reason=review_reason,
+    )
+
+    db = Mock(spec=Session)
+    db.get.return_value = stored
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        result = update_ticket(ticket)
+
+    assert result is stored
+    assert stored.category == ticket.category
+    assert stored.status == ticket.status
+    assert stored.order_number == ticket.order_number
+    assert stored.reply_draft == ticket.reply_draft
+    assert stored.knowledge_sources == ticket.knowledge_sources
+    assert stored.review_reason == ticket.review_reason
+    db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
 
 
 @pytest.mark.parametrize(

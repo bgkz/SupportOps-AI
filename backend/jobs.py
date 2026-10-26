@@ -44,7 +44,6 @@ def update_ticket(ticket: Tickets) -> Tickets:
         stored = db.get(Tickets, ticket.id, with_for_update=True)
         if stored is None:
             raise TicketRetrievalError(f"Ticket {ticket.id} wurde nicht gefunden.")
-        # A duplicate job must not overwrite a completed review transition.
         if stored.status != TicketStatus.PENDING:
             return stored
         for field in (
