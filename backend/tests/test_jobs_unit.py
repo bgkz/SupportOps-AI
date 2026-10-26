@@ -1,10 +1,112 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.orm import Session
 
-from backend.jobs import process_ticket
+from backend.exceptions.tickets import TicketRetrievalError
+from backend.jobs import process_ticket, save_ticket_approval
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
+
+
+@pytest.mark.parametrize(
+    ("invalid_ticket", "expected_exc", "exc_message"),
+    [
+        (None, TicketRetrievalError, "wurde nicht gefunden"),
+        (
+            Tickets(status=TicketStatus.PENDING),
+            ValueError,
+            "Das Ticket wartet nicht auf Freigabe",
+        ),
+        (
+            Tickets(reply_draft=None, status=TicketStatus.WAITING_FOR_APPROVAL),
+            ValueError,
+            "Es gibt keinen Antwortentwurf zur Freigabe.",
+        ),
+    ],
+)
+def test_save_ticket_approval_raises_errors(
+    invalid_ticket: Tickets | None,
+    expected_exc: type[Exception],
+    exc_message: str,
+) -> None:
+    ticket_id = uuid4()
+    db = Mock(spec=Session)
+    db.get.return_value = invalid_ticket
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        with pytest.raises(expected_exception=expected_exc, match=exc_message):
+            save_ticket_approval(ticket_id=ticket_id, approved=True)
+
+    db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
+
+
+@pytest.mark.parametrize(
+    ("stored_approved", "approved"),
+    [(False, True), (True, False)],
+)
+def test_save_ticket_approval_rejects_conflicting_decision(
+    stored_approved: bool, approved: bool
+) -> None:
+    ticket_id = uuid4()
+    fake_ticket = Tickets(
+        id=ticket_id,
+        status=TicketStatus.WAITING_FOR_APPROVAL,
+        reply_draft={"reply_text": "Antwortentwurf"},
+        approved=stored_approved,
+    )
+    db = Mock(spec=Session)
+    db.get.return_value = fake_ticket
+
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        with pytest.raises(
+            ValueError, match="Eine andere Entscheidung wurde bereits gespeichert"
+        ):
+            save_ticket_approval(ticket_id=ticket_id, approved=approved)
+
+    assert fake_ticket.approved is stored_approved
+    db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
+
+
+@pytest.mark.parametrize(
+    ("stored_approved", "approved"),
+    [
+        pytest.param(None, True, id="new-approval"),
+        pytest.param(None, False, id="new-rejection"),
+        pytest.param(True, True, id="repeated-approval"),
+        pytest.param(False, False, id="repeated-rejection"),
+    ],
+)
+def test_save_ticket_approval_saves_decision(
+    stored_approved: bool | None, approved: bool
+) -> None:
+    ticket_id = uuid4()
+    fake_ticket = Tickets(
+        id=ticket_id,
+        user_id=uuid4(),
+        text="Meine Bestellung AB-0042 ist beschädigt angekommen.",
+        reply_draft={
+            "reply_text": "Es tut uns leid, dass Ihre Bestellung AB-0042 beschädigt angekommen ist. Bitte senden Sie uns Fotos der beschädigten Ware.",
+            "source_ids": ["source-1"],
+            "needs_manual_review": True,
+        },
+        status=TicketStatus.WAITING_FOR_APPROVAL,
+        approved=stored_approved,
+    )
+
+    db = Mock(spec=Session)
+    db.get.return_value = fake_ticket
+    with patch("backend.jobs.SessionLocal.begin") as mock_begin:
+        mock_begin.return_value.__enter__.return_value = db
+
+        result = save_ticket_approval(ticket_id=ticket_id, approved=approved)
+
+    assert result is fake_ticket
+    assert result.approved is approved
+    db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
 
 
 def test_process_ticket_closes_client_when_workflow_start_fails() -> None:
