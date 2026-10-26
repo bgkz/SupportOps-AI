@@ -84,11 +84,6 @@ def process_ticket(ticket_id: UUID) -> None:
     if ticket.status != TicketStatus.PENDING:
         return
 
-    from langgraph.checkpoint.postgres import PostgresSaver
-
-    from backend.services.ticket_classification_service import TicketClassificationService
-    from backend.workflows.ticket_workflow import TicketWorkflow
-
     client = QdrantClient(url=QDRANT_CLIENT_URL)
     postgres_url = DATABASE_URL.replace(
         "postgresql+psycopg://",
@@ -96,8 +91,14 @@ def process_ticket(ticket_id: UUID) -> None:
         1,
     )
     try:
+        from langgraph.checkpoint.postgres import PostgresSaver
+
         with PostgresSaver.from_conn_string(postgres_url) as checkpointer:
             checkpointer.setup()
+            from backend.services.ticket_classification_service import (
+                TicketClassificationService,
+            )
+            from backend.workflows.ticket_workflow import TicketWorkflow
 
             workflow = TicketWorkflow(
                 ticket_classification_service=TicketClassificationService(),
@@ -106,10 +107,7 @@ def process_ticket(ticket_id: UUID) -> None:
                 checkpointer=checkpointer,
             )
             result = workflow.start(ticket)
-            snapshot = workflow.routing_graph.get_state(
-                {"configurable": {"thread_id": str(ticket.id)}}
-            )
-            print("Nächster Schritt:", snapshot.next)
+
     finally:
         client.close()
 
