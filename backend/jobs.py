@@ -39,7 +39,7 @@ def get_ticket(ticket_id: UUID) -> Tickets:
         return ticket
 
 
-def update_ticket(ticket: Tickets) -> Tickets:
+def save_workflow_result(ticket: Tickets) -> Tickets:
     with SessionLocal.begin() as db:
         stored = db.get(Tickets, ticket.id, with_for_update=True)
         if stored is None:
@@ -118,4 +118,4 @@ def process_ticket(ticket_id: UUID) -> None:
     ticket.review_reason = result["review_reason"]
     ticket.approved = result["approved"]
 
-    update_ticket(ticket)
+    save_workflow_result(ticket)

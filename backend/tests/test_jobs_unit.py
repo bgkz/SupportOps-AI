@@ -10,7 +10,7 @@ from backend.jobs import (
     get_ticket,
     process_ticket,
     save_ticket_approval,
-    update_ticket,
+    save_workflow_result,
 )
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
 
@@ -91,7 +91,7 @@ def test_get_ticket_returns_ticket() -> None:
         TicketStatus.RESOLVED,
     ],
 )
-def test_update_ticket_keeps_non_pending_ticket_unchanged(
+def test_save_workflow_result_keeps_non_pending_ticket_unchanged(
     ticket_status: TicketStatus,
 ) -> None:
     ticket_id = uuid4()
@@ -112,7 +112,7 @@ def test_update_ticket_keeps_non_pending_ticket_unchanged(
     with patch("backend.jobs.SessionLocal.begin") as mock_begin:
         mock_begin.return_value.__enter__.return_value = db
 
-        result = update_ticket(ticket)
+        result = save_workflow_result(ticket)
 
     assert result is stored
     assert stored.status is ticket_status
@@ -120,7 +120,7 @@ def test_update_ticket_keeps_non_pending_ticket_unchanged(
     db.get.assert_called_once_with(Tickets, ticket_id, with_for_update=True)
 
 
-def test_update_ticket_raises_error_when_ticket_not_found() -> None:
+def test_save_workflow_result_raises_error_when_ticket_not_found() -> None:
     db = Mock(spec=Session)
     db.get.return_value = None
 
@@ -130,13 +130,13 @@ def test_update_ticket_raises_error_when_ticket_not_found() -> None:
         mock_begin.return_value.__enter__.return_value = db
 
         with pytest.raises(TicketRetrievalError, match="wurde nicht gefunden"):
-            update_ticket(ticket=ticket)
+            save_workflow_result(ticket=ticket)
 
     db.get.assert_called_once_with(Tickets, ticket.id, with_for_update=True)
 
 
 @pytest.mark.parametrize("review_reason", ["draft_requires_review", None])
-def test_update_ticket_copies_workflow_fields(review_reason: str | None) -> None:
+def test_save_workflow_result_copies_workflow_fields(review_reason: str | None) -> None:
     ticket_id = uuid4()
     stored = Tickets(
         id=ticket_id,
@@ -159,7 +159,7 @@ def test_update_ticket_copies_workflow_fields(review_reason: str | None) -> None
     with patch("backend.jobs.SessionLocal.begin") as mock_begin:
         mock_begin.return_value.__enter__.return_value = db
 
-        result = update_ticket(ticket)
+        result = save_workflow_result(ticket)
 
     assert result is stored
     assert stored.category == ticket.category
@@ -289,7 +289,7 @@ def test_process_ticket_closes_client_when_workflow_start_fails() -> None:
             "backend.workflows.ticket_workflow.TicketWorkflow"
         ) as mock_workflow_class,
         patch("backend.jobs.get_ticket", return_value=fake_ticket) as mock_get_ticket,
-        patch("backend.jobs.update_ticket") as mock_update_ticket,
+        patch("backend.jobs.save_workflow_result") as mock_save_workflow_result,
         patch("backend.jobs.QdrantClient") as mock_qdrant_client,
         patch(
             "langgraph.checkpoint.postgres.PostgresSaver.from_conn_string"
@@ -307,7 +307,7 @@ def test_process_ticket_closes_client_when_workflow_start_fails() -> None:
         checkpointer.setup.assert_called_once()
         mock_workflow_class.return_value.start.assert_called_once_with(fake_ticket)
         mock_qdrant_client.return_value.close.assert_called_once()
-        mock_update_ticket.assert_not_called()
+        mock_save_workflow_result.assert_not_called()
 
 
 def test_process_ticket_closes_client_when_checkpointer_enter_fails() -> None:
@@ -324,7 +324,7 @@ def test_process_ticket_closes_client_when_checkpointer_enter_fails() -> None:
             "backend.workflows.ticket_workflow.TicketWorkflow"
         ) as mock_workflow_class,
         patch("backend.jobs.get_ticket", return_value=fake_ticket) as mock_get_ticket,
-        patch("backend.jobs.update_ticket") as mock_update_ticket,
+        patch("backend.jobs.save_workflow_result") as mock_save_workflow_result,
         patch("backend.jobs.QdrantClient") as mock_qdrant_client,
         patch(
             "langgraph.checkpoint.postgres.PostgresSaver.from_conn_string"
@@ -340,7 +340,7 @@ def test_process_ticket_closes_client_when_checkpointer_enter_fails() -> None:
         mock_get_ticket.assert_called_once_with(ticket_id)
         mock_workflow_class.assert_not_called()
         mock_qdrant_client.return_value.close.assert_called_once()
-        mock_update_ticket.assert_not_called()
+        mock_save_workflow_result.assert_not_called()
 
 
 def test_process_ticket_qdrant_client_has_error_so_ticket_workflow_doesnt_start() -> (
@@ -403,8 +403,8 @@ def test_process_ticket_saves_workflow_result_and_closes_client() -> None:
     with (
         patch("backend.jobs.get_ticket", return_value=fake_ticket) as mock_get_ticket,
         patch(
-            "backend.jobs.update_ticket", return_value=fake_ticket
-        ) as mock_update_ticket,
+            "backend.jobs.save_workflow_result", return_value=fake_ticket
+        ) as mock_save_workflow_result,
         patch(
             "backend.workflows.ticket_workflow.TicketWorkflow"
         ) as mock_workflow_class,
@@ -431,7 +431,7 @@ def test_process_ticket_saves_workflow_result_and_closes_client() -> None:
         checkpointer=checkpointer,
     )
     mock_workflow.start.assert_called_once_with(fake_ticket)
-    mock_update_ticket.assert_called_once_with(fake_ticket)
+    mock_save_workflow_result.assert_called_once_with(fake_ticket)
     mock_qdrant_client.return_value.close.assert_called_once()
 
     assert fake_ticket.category == TicketCategories.DAMAGED_GOODS
