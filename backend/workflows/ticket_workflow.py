@@ -14,6 +14,7 @@ from backend.config import (
     TICKET_CLASSIFICATION_CONFIDENCE_THRESHOLD,
 )
 from backend.exceptions.orders import OrderNotFoundError
+from backend.exceptions.tickets import TicketApprovalConflictError
 from backend.models.tickets import Tickets
 from backend.services.ticket_classification_service import (
     TicketAnalysisResult,
@@ -183,12 +184,40 @@ class TicketWorkflow:
 
     def approval_node(self, state: TicketState) -> dict:
         approved = interrupt({"reply_draft": state["reply_draft"]})
-        return {"approved": approved}
+        return {
+            "approved": approved,
+            "status": "resolved" if approved else "escalated",
+            "review_reason": ("draft_approved" if approved else "draft_rejected"),
+        }
 
     def resume(self, ticket_id: UUID, approved: bool):
+        config = {"configurable": {"thread_id": str(ticket_id)}}
+        snapshot = self.routing_graph.get_state(config)
+
+        if not snapshot.values:
+            raise TicketApprovalConflictError(
+                "No saved workflow exists for this ticket."
+            )
+
+        previous_decision = snapshot.values.get("approved")
+
+        if previous_decision is not None:
+            if previous_decision != approved:
+                raise TicketApprovalConflictError(
+                    "A different approval decision has already been recorded."
+                )
+            return dict(snapshot.values)
+
+        has_interrupt = any(task.interrupts for task in snapshot.tasks)
+
+        if not has_interrupt:
+            raise TicketApprovalConflictError(
+                "This workflow is not waiting for an approval decision."
+            )
+
         return self.routing_graph.invoke(
             Command(resume=approved),
-            config={"configurable": {"thread_id": str(ticket_id)}},
+            config=config,
         )
 
     def __init__(

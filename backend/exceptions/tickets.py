@@ -1,3 +1,11 @@
+class TicketApprovalConflictError(Exception):
+    pass
+
+
+class TicketApprovalPermissionError(Exception):
+    pass
+
+
 class TicketCreationError(Exception):
     pass
 
