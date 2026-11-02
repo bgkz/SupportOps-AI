@@ -23,6 +23,29 @@ router = APIRouter(
 )
 
 
+@router.get(
+    "/{ticket_id}", status_code=status.HTTP_200_OK, response_model=TicketResponse
+)
+def get_ticket(
+    user_id: UUID,
+    ticket_id: UUID,
+    tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
+):
+
+    try:
+        return tickets_service.get_ticket(ticket_id=ticket_id, user_id=user_id)
+    except UserNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+    except TicketRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+
+
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=TicketResponse)
 def create_ticket(
     create_ticket_request: CreateTicketRequest,

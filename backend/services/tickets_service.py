@@ -5,6 +5,7 @@ from backend.exceptions.tickets import (
     DuplicateIdempotencyKeyError,
     IdempotencyConflictError,
     TicketCreationError,
+    TicketRetrievalError,
 )
 from backend.models.tickets import Tickets
 from backend.repositories.tickets_repository import TicketsRepository
@@ -25,6 +26,13 @@ class TicketsService:
         self.tickets_repo = tickets_repository
         self.users_service = users_service
 
+    def get_ticket(self, user_id: UUID, ticket_id: UUID) -> Tickets:
+        self.users_service.get_user(user_id=user_id)
+        ticket = self.tickets_repo.get_by_user_id(user_id=user_id, ticket_id=ticket_id)
+        if ticket is None:
+            raise TicketRetrievalError(f"Ticket {ticket_id}  wurde nicht gefunden")
+        return ticket
+
     def create_ticket(
         self, request: CreateTicketRequest, idempotency_key: UUID
     ) -> TicketCreationResult:
@@ -35,7 +43,9 @@ class TicketsService:
         )
 
         if existing_ticket is not None:
-            return TicketCreationResult(self._validate_replay(existing_ticket, request), False)
+            return TicketCreationResult(
+                self._validate_replay(existing_ticket, request), False
+            )
 
         try:
             ticket = self.tickets_repo.add(
@@ -52,7 +62,9 @@ class TicketsService:
             )
             if existing_ticket is None:
                 raise TicketCreationError("Ticket could not be created") from error
-            return TicketCreationResult(self._validate_replay(existing_ticket, request), False)
+            return TicketCreationResult(
+                self._validate_replay(existing_ticket, request), False
+            )
 
     @staticmethod
     def _validate_replay(ticket: Tickets, request: CreateTicketRequest) -> Tickets:
