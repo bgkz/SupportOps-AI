@@ -20,11 +20,6 @@ router = APIRouter(
 )
 
 
-@router.get("/")
-def list_users():
-    pass
-
-
 @router.get("/{user_id}", status_code=status.HTTP_200_OK, response_model=UserResponse)
 def get_user(user_id: UUID, users_service: UsersService = Depends(get_users_service)):  # noqa: B008
     try:
@@ -75,8 +70,3 @@ def change_email(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(error),
         ) from error
-
-
-@router.delete("/{user_id}")
-def delete_user(user_id: UUID):
-    pass
