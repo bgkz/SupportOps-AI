@@ -6,7 +6,7 @@ import pytest
 from pytest import MonkeyPatch
 from sqlalchemy.orm import Session, sessionmaker
 
-from backend.exceptions.tickets import TicketRetrievalError
+from backend.exceptions.tickets import TicketApprovalConflictError, TicketRetrievalError
 from backend.jobs import (
     get_ticket,
     process_ticket,
@@ -51,7 +51,7 @@ def test_session_factory(db: Session) -> sessionmaker:
                 "Beispiel draft",
                 None,
                 True,
-                ValueError,
+                TicketApprovalConflictError,
                 r"Das Ticket wartet nicht auf Freigabe\.",
                 id=f"invalid-status-{status.value}",
             )
@@ -67,7 +67,7 @@ def test_session_factory(db: Session) -> sessionmaker:
             None,
             None,
             True,
-            ValueError,
+            TicketApprovalConflictError,
             r"Es gibt keinen Antwortentwurf zur Freigabe\.",
             id="missing-reply-draft",
         ),
@@ -76,8 +76,8 @@ def test_session_factory(db: Session) -> sessionmaker:
             "Beispiel draft",
             True,
             False,
-            ValueError,
-            r"Eine andere Entscheidung wurde bereits gespeichert\.",
+            TicketApprovalConflictError,
+            r"A different approval decision has already been recorded\.",
             id="reject-previously-approved-ticket",
         ),
         pytest.param(
@@ -85,8 +85,8 @@ def test_session_factory(db: Session) -> sessionmaker:
             "Beispiel draft",
             False,
             True,
-            ValueError,
-            r"Eine andere Entscheidung wurde bereits gespeichert\.",
+            TicketApprovalConflictError,
+            r"A different approval decision has already been recorded\.",
             id="approve-previously-rejected-ticket",
         ),
     ],

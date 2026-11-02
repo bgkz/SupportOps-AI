@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from backend.exceptions.tickets import TicketRetrievalError
+from backend.exceptions.tickets import TicketApprovalConflictError, TicketRetrievalError
 from backend.jobs import (
     get_embedding_model,
     get_ticket,
@@ -177,12 +177,12 @@ def test_save_workflow_result_copies_workflow_fields(review_reason: str | None) 
         (None, TicketRetrievalError, "wurde nicht gefunden"),
         (
             Tickets(status=TicketStatus.PENDING),
-            ValueError,
+            TicketApprovalConflictError,
             "Das Ticket wartet nicht auf Freigabe",
         ),
         (
             Tickets(reply_draft=None, status=TicketStatus.WAITING_FOR_APPROVAL),
-            ValueError,
+            TicketApprovalConflictError,
             "Es gibt keinen Antwortentwurf zur Freigabe.",
         ),
     ],
@@ -225,7 +225,7 @@ def test_save_ticket_approval_rejects_conflicting_decision(
         mock_begin.return_value.__enter__.return_value = db
 
         with pytest.raises(
-            ValueError, match="Eine andere Entscheidung wurde bereits gespeichert"
+            TicketApprovalConflictError, match="A different approval decision has already been recorded"
         ):
             save_ticket_approval(ticket_id=ticket_id, approved=approved)
 

@@ -18,6 +18,13 @@ class TicketsRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_ticket(self, ticket_id: UUID) -> Tickets | None:
+        try:
+            return self.db.get(Tickets, ticket_id)
+        except SQLAlchemyError as error:
+            self.db.rollback()
+            raise TicketRetrievalError("Ticket could not be retrieved") from error
+
     def get_by_idempotency_key(
         self, user_id: UUID, idempotency_key: UUID
     ) -> Tickets | None:

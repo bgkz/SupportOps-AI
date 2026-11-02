@@ -10,6 +10,11 @@ from backend.config import (
 from backend.models.tickets import TicketCategories, TicketStatus
 
 
+class ApproveTicketRequest(BaseModel):
+    user_id: UUID
+    approved: bool
+
+
 class CreateTicketRequest(BaseModel):
     user_id: UUID
     text: str = Field(
@@ -29,6 +34,7 @@ class TicketResponse(BaseModel):
     reply_draft: dict | None = None
     knowledge_sources: list[dict] | None = None
     review_reason: str | None = None
+    approved: bool | None = None
 
     created_at: datetime
     updated_at: datetime

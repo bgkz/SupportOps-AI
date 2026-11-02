@@ -12,7 +12,7 @@ from backend.config import (
     QDRANT_CLIENT_URL,
 )
 from backend.database import SessionLocal
-from backend.exceptions.tickets import TicketRetrievalError
+from backend.exceptions.tickets import TicketApprovalConflictError, TicketRetrievalError
 from backend.models.tickets import TicketCategories, Tickets, TicketStatus
 from backend.models.users import Users  # noqa: F401
 
@@ -65,16 +65,23 @@ def save_ticket_approval(ticket_id: UUID, approved: bool) -> Tickets:
         if ticket is None:
             raise TicketRetrievalError(f"Ticket {ticket_id} wurde nicht gefunden.")
 
+        if ticket.approved is not None:
+            if ticket.approved != approved:
+                raise TicketApprovalConflictError(
+                    "A different approval decision has already been recorded."
+                )
+            return ticket
+
         if ticket.status != TicketStatus.WAITING_FOR_APPROVAL:
-            raise ValueError("Das Ticket wartet nicht auf Freigabe.")
+            raise TicketApprovalConflictError("Das Ticket wartet nicht auf Freigabe.")
 
         if ticket.reply_draft is None:
-            raise ValueError("Es gibt keinen Antwortentwurf zur Freigabe.")
-
-        if ticket.approved is not None and ticket.approved != approved:
-            raise ValueError("Eine andere Entscheidung wurde bereits gespeichert.")
+            raise TicketApprovalConflictError("Es gibt keinen Antwortentwurf zur Freigabe.")
 
         ticket.approved = approved
+
+        ticket.status = TicketStatus.RESOLVED if approved else TicketStatus.ESCALATED
+        ticket.review_reason = "draft_approved" if approved else "draft_rejected"
         return ticket
 
 
