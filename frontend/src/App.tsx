@@ -1,9 +1,10 @@
-import { useState } from "react";
-
 import "./App.css";
 
+import { useState } from "react";
+import RegistrationView from "./components/RegistrationView";
+
 function App() {
-  return <h1>Hello Was gehtttttttttttttt</h1>;
+  return <RegistrationView></RegistrationView>;
 }
 
 export default App;
