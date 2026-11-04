@@ -12,19 +12,21 @@ export default function RegistrationView() {
     e.preventDefault();
     setErrorMessage("");
     if (email.length == 0) {
-      setErrorMessage("Please enter your email address.");
+      setErrorMessage("Error: Please enter your email address.");
       return;
     }
     if (password.length == 0) {
-      setErrorMessage("Please enter your password.");
+      setErrorMessage("Error: Please enter your password.");
       return;
     }
     if (passwordRepeat.length == 0) {
-      setErrorMessage("Please enter the password in password repeat field");
+      setErrorMessage(
+        "Error: Please enter the password in password repeat field",
+      );
       return;
     }
     if (password != passwordRepeat) {
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage("Error: Passwords do not match.");
       return;
     }
 
@@ -45,10 +47,11 @@ export default function RegistrationView() {
       if (response.ok) {
         alert("Erfolg: " + JSON.stringify(data));
       } else {
-        setErrorMessage("Fehler: " + JSON.stringify(data));
+        setErrorMessage("Error: " + data.detail[0].msg);
+        return;
       }
     } catch (error) {
-      alert(error);
+      setErrorMessage("Unable to connect. Please try again.");
     }
   }
 
