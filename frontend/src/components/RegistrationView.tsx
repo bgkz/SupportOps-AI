@@ -45,7 +45,10 @@ export default function RegistrationView() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Erfolg: " + JSON.stringify(data));
+        setErrorMessage(
+          "We have sent an confirmation email, please check your email",
+        );
+        return;
       } else {
         setErrorMessage("Error: " + data.detail[0].msg);
         return;

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from fastapi.params import Depends
 
 from backend.dependencies.users import get_users_service
+from backend.exceptions.auth import EmailAlreadyExistError
 from backend.schemas.auth import RegisterRequest
 from backend.services.users_service import UsersService
 
@@ -13,5 +14,11 @@ def register(
     register_request: RegisterRequest,
     users_service: UsersService = Depends(get_users_service),  # noqa: B008
 ):
-    print(register_request.email)
-    print(register_request.password._secret_value)
+
+    try:
+        ...
+    except EmailAlreadyExistError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
