@@ -53,7 +53,7 @@ export default function RegistrationView() {
         setErrorMessage("Error: " + data.detail);
         return;
       }
-    } catch (error) {
+    } catch {
       setErrorMessage("Unable to connect. Please try again");
     }
   }

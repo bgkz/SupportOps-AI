@@ -42,6 +42,7 @@ def test_create_user_response_from_json() -> None:
     assert response.email == VALID_TEST_EMAIL
     assert response.created_at == TEST_CREATED_AT
     assert response.updated_at == TEST_UPDATED_AT
+    assert response.email_verified_at is None
 
 
 def test_create_user_response_from_strings() -> None:
@@ -67,6 +68,7 @@ def test_create_user_response_from_strings() -> None:
         ("email", "invalid email"),
         ("created_at", "no date"),
         ("updated_at", "no date"),
+        ("email_verified_at", "no date"),
     ],
 )
 def test_create_user_response_invalid_values(field: str, invalid_value: str) -> None:
@@ -106,13 +108,15 @@ def test_create_user_response_from_attributes() -> None:
     assert "hashed_password" not in response.model_dump()
 
 
-def test_create_user_response_valid_values() -> None:
+@pytest.mark.parametrize("verified_at", [None, TEST_UPDATED_AT])
+def test_create_user_response_valid_values(verified_at: datetime | None) -> None:
     response = UserResponse(
         id=TEST_USER_ID,
         user_role=UserRole.CUSTOMER,
         email=VALID_TEST_EMAIL,
         created_at=TEST_CREATED_AT,
         updated_at=TEST_UPDATED_AT,
+        email_verified_at=verified_at,
     )
 
     assert response.id == TEST_USER_ID
@@ -120,6 +124,7 @@ def test_create_user_response_valid_values() -> None:
     assert response.email == VALID_TEST_EMAIL
     assert response.created_at == TEST_CREATED_AT
     assert response.updated_at == TEST_UPDATED_AT
+    assert response.email_verified_at == verified_at
 
 
 @pytest.mark.parametrize("password", ["", " ", "a" * (PASSWORD_MIN_LENGTH - 1)])

@@ -34,4 +34,4 @@ class Users(Base):
         nullable=False, server_default=sa.func.now(), onupdate=sa.func.now()
     )
 
-    email_verified_at: Mapped[datetime] = mapped_column(nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(nullable=True)
