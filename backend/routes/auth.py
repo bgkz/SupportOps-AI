@@ -59,44 +59,39 @@ def register(
             detail=str(error),
         ) from error
 
-    @router.get(
-        "/verify-email", response_model=UserResponse, status_code=status.HTTP_200_OK
-    )
-    def verify_email(
-        token: str,
-        users_service: UsersService = Depends(get_users_service),  # noqa: B008
-        email_verification_tokens_service: EmailVerificationTokensService = Depends(  # noqa: B008
-            get_email_verification_tokens_service
-        ),
-    ):
-        try:
-            verification_token = email_verification_tokens_service.verify(
-                token_hash=token
-            )
-            return users_service.verify_email(
-                user_id=verification_token.user_id,
-            )
 
-        except EmailVerificationTokenNotFound as error:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
-            )
-        except EmailVerificationTokenExpiredError as error:
-            raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(error))
-        except EmailVerificationTokenRetrievalError as error:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=str(error),
-            ) from error
-        except UserNotFoundError as error:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
-            )
-        except UserUpdateError as error:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+@router.get(
+    "/verify-email", response_model=UserResponse, status_code=status.HTTP_200_OK
+)
+def verify_email(
+    token: str,
+    users_service: UsersService = Depends(get_users_service),  # noqa: B008
+    email_verification_tokens_service: EmailVerificationTokensService = Depends(  # noqa: B008
+        get_email_verification_tokens_service
+    ),
+):
+    try:
+        verification_token = email_verification_tokens_service.verify(token_hash=token)
+        return users_service.verify_email(
+            user_id=verification_token.user_id,
+        )
 
-        except Exception as error:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=str(error),
-            ) from error
+    except EmailVerificationTokenNotFound as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except EmailVerificationTokenExpiredError as error:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=str(error))
+    except EmailVerificationTokenRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
+    except UserNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+    except UserUpdateError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
