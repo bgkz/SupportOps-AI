@@ -142,6 +142,7 @@ def test_change_email_returns_updated_user(client: TestClient) -> None:
             "email": email,
             "created_at": "2026-01-01T12:00:00",
             "updated_at": "2026-01-02T14:30:00",
+            "email_verified_at": None,
         }
         service_mock.change_email.assert_called_once_with(
             user_id=expected_user.id, request=request
@@ -221,6 +222,7 @@ def test_get_user_returns_existing_user(client: TestClient) -> None:
             "email": "test.user@example.com",
             "created_at": "2026-01-01T12:00:00",
             "updated_at": "2026-01-02T14:30:00",
+            "email_verified_at": None,
         }
 
         service_mock.get_user.assert_called_once_with(user_id)

@@ -1,4 +1,5 @@
 # Local environment files and secrets
+/DEV-COMMANDS.local.md
 .env
 .env.*
 !.env.example

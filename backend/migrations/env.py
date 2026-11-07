@@ -5,6 +5,7 @@ from sqlalchemy import engine_from_config, pool
 
 from backend.config import DATABASE_URL
 from backend.database import Base
+from backend.models.email_verification_tokens import EmailVerificationTokens
 from backend.models.orders import Orders
 from backend.models.tickets import Tickets
 from backend.models.users import Users
