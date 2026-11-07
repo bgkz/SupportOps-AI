@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     created_at: datetime
     updated_at: datetime
+    email_verified_at: datetime
 
 
 class ChangeEmailRequest(BaseModel):

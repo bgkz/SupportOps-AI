@@ -1,5 +1,5 @@
 # Local environment files and secrets
-/DB-ZUGRIFF.local.md
+/DEV-COMMANDS.local.md
 .env
 .env.*
 !.env.example

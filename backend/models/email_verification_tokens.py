@@ -27,6 +27,7 @@ class EmailVerificationTokens(Base):
     )
 
     expires_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True),
         nullable=False,
     )
 

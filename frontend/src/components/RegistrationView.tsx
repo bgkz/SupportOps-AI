@@ -50,11 +50,11 @@ export default function RegistrationView() {
         );
         return;
       } else {
-        setErrorMessage("Error: " + data.detail[0].msg);
+        setErrorMessage("Error: " + data.detail);
         return;
       }
     } catch (error) {
-      setErrorMessage("Unable to connect. Please try again.");
+      setErrorMessage("Unable to connect. Please try again");
     }
   }
 
