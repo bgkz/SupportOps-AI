@@ -3,7 +3,8 @@ import "./App.css";
 import LoginView from "./components/LoginView";
 import type { User } from "./types/user";
 
-import Dashboard from "./components/dashboard/Dashboard";
+import CustomerDashboard from "./components/customer-dashboard/CustomerDashboard";
+import SupportAgentDashboard from "./components/support-agent-dashboard/SupportAgentDashboard";
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,8 +18,17 @@ function App() {
           <button>Make an Account</button>
         </>
       )}
-      {isLoggedIn && (
-        <Dashboard user={user} onLogout={() => setUser(null)}></Dashboard>
+      {isLoggedIn && user.user_role === "customer" && (
+        <CustomerDashboard
+          user={user}
+          onLogout={() => setUser(null)}
+        ></CustomerDashboard>
+      )}
+      {isLoggedIn && user.user_role === "support_agent" && (
+        <SupportAgentDashboard
+          user={user}
+          onLogout={() => setUser(null)}
+        ></SupportAgentDashboard>
       )}
     </div>
   );

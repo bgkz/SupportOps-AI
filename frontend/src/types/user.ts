@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const userSchema = z.object({
   id: z.uuid(),
-  user_role: z.string(),
+  user_role: z.enum(["customer", "support_agent"]),
   email: z.email(),
   created_at: z.iso.datetime({ offset: true, local: true }),
   updated_at: z.iso.datetime({ offset: true, local: true }),
