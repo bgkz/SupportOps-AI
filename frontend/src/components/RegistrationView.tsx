@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./RegistrationView.css";
+import { validateRegistration } from "../utils/validation";
 
 export default function RegistrationView() {
   const BASE_BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -10,23 +11,9 @@ export default function RegistrationView() {
 
   async function handleRegistration(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    setErrorMessage("");
-    if (email.length == 0) {
-      setErrorMessage("Error: Please enter your email address.");
-      return;
-    }
-    if (password.length == 0) {
-      setErrorMessage("Error: Please enter your password.");
-      return;
-    }
-    if (passwordRepeat.length == 0) {
-      setErrorMessage(
-        "Error: Please enter the password in password repeat field",
-      );
-      return;
-    }
-    if (password != passwordRepeat) {
-      setErrorMessage("Error: Passwords do not match.");
+    const error = validateRegistration(email, password, passwordRepeat);
+    setErrorMessage(error ?? "");
+    if (error !== null) {
       return;
     }
 

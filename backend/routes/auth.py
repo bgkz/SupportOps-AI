@@ -7,6 +7,7 @@ from backend.dependencies.email_verification_tokens import (
     get_email_verification_tokens_service,
 )
 from backend.dependencies.users import get_users_service
+from backend.exceptions.auth import InvalidCredentialsError
 from backend.exceptions.email_verification_tokens import (
     EmailVerificationTokenExpiredError,
     EmailVerificationTokenNotFound,
@@ -16,11 +17,12 @@ from backend.exceptions.users import (
     EmailAlreadyExistError,
     UserCreationError,
     UserNotFoundError,
+    UserRetrievalError,
     UserUpdateError,
 )
 from backend.jobs.auth import send_email_verification
 from backend.redis_queue import job
-from backend.schemas.auth import RegisterRequest
+from backend.schemas.auth import LoginRequest, RegisterRequest
 from backend.schemas.users import UserResponse
 from backend.services.email_verification_tokens_service import (
     EmailVerificationTokensService,
@@ -28,6 +30,28 @@ from backend.services.email_verification_tokens_service import (
 from backend.services.users_service import UsersService
 
 router = APIRouter(prefix="/auth")
+
+
+@router.post("/login", response_model=UserResponse, status_code=status.HTTP_200_OK)
+def login(
+    login_request: LoginRequest,
+    users_service: UsersService = Depends(get_users_service),  # noqa: B008
+):
+    try:
+        return users_service.authenticate(
+            email=login_request.email,
+            password=login_request.password.get_secret_value(),
+        )
+
+    except UserRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )
+    except InvalidCredentialsError as error:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(error),
+        ) from error
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)

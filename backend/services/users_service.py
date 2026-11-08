@@ -1,16 +1,26 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
+from backend.exceptions.auth import InvalidCredentialsError
 from backend.exceptions.users import UserNotFoundError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
-from backend.security.passwords import hash_password
+from backend.security.passwords import hash_password, verify_password
 
 
 class UsersService:
     def __init__(self, users_repo: UsersRepository):
         self.users_repo = users_repo
+
+    def authenticate(self, email: str, password: str) -> Users:
+        user = self.users_repo.get_by_email(email=email)
+        if user is None or not verify_password(
+            password=password,
+            hashed_password=user.hashed_password,
+        ):
+            raise InvalidCredentialsError("Invalid email or password")
+        return user
 
     def verify_email(self, user_id: UUID) -> Users:
         user = self.get_user(user_id)
