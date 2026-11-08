@@ -56,7 +56,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
         );
         return;
       }
-    } catch (error) {
+    } catch {
       setErrorMessage("Unable to connect. Please try again");
     }
   }
