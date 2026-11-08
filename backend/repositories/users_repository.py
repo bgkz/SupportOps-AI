@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from psycopg.errors import NotNullViolation, UniqueViolation
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,13 @@ from backend.models.users import Users
 class UsersRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    def get_by_email(self, email: str) -> Users | None:
+        try:
+            statement = select(Users).where(Users.email == email)
+            return self.db.execute(statement=statement).scalar_one_or_none()
+        except SQLAlchemyError as error:
+            raise UserRetrievalError("User could not be retrieved") from error
 
     def update(self, user: Users) -> Users:
         try:
