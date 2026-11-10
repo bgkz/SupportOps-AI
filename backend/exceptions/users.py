@@ -6,6 +6,10 @@ class EmailAlreadyExistError(Exception):
     pass
 
 
+class EmailNotVerifiedError(Exception):
+    pass
+
+
 class UserRetrievalError(Exception):
     pass
 

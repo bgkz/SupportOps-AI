@@ -19,3 +19,11 @@ class SessionsService:
         )
 
         return session_id
+
+    def get_session(self, session_id: str) -> dict | None:
+        data = self.redis.get(f"session:{session_id}")
+
+        if data is None:
+            return None
+
+        return json.loads(data)

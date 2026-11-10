@@ -3,10 +3,11 @@ import secrets
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.params import Depends
 
+from backend.dependencies.auth import get_sessions_service
 from backend.dependencies.email_verification_tokens import (
     get_email_verification_tokens_service,
 )
-from backend.dependencies.users import get_sessions_service, get_users_service
+from backend.dependencies.users import get_users_service
 from backend.exceptions.auth import InvalidCredentialsError
 from backend.exceptions.email_verification_tokens import (
     EmailVerificationTokenExpiredError,
@@ -15,6 +16,7 @@ from backend.exceptions.email_verification_tokens import (
 )
 from backend.exceptions.users import (
     EmailAlreadyExistError,
+    EmailNotVerifiedError,
     UserCreationError,
     UserNotFoundError,
     UserRetrievalError,
@@ -52,7 +54,7 @@ def login(
             key="session_id",
             value=session_id,
             httponly=True,
-            secure=True,
+            secure=False,
             samesite="lax",
             max_age=86400,
         )
@@ -66,6 +68,11 @@ def login(
     except InvalidCredentialsError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(error),
+        ) from error
+    except EmailNotVerifiedError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(error),
         ) from error
 

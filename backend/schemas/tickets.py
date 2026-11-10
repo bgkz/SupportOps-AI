@@ -16,10 +16,20 @@ class ApproveTicketRequest(BaseModel):
 
 
 class CreateTicketRequest(BaseModel):
-    user_id: UUID
+    order_number: str | None = Field(
+        default=None,
+        pattern=r"^[A-Z]{2}-\d{4}$",
+    )
     text: str = Field(
         min_length=TICKET_TEXT_MIN_LENGTH, max_length=TICKET_TEXT_MAX_LENGTH
     )
+
+
+# class CreateTicketRequest(BaseModel):
+#     user_id: UUID
+#     text: str = Field(
+#         min_length=TICKET_TEXT_MIN_LENGTH, max_length=TICKET_TEXT_MAX_LENGTH
+#     )
 
 
 class TicketResponse(BaseModel):
