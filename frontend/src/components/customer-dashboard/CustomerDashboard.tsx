@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import type { User } from "../../types/user";
+import { type User } from "../../types/user";
 import "./CustomerDashboard.css";
+import { ticketSchema, type Ticket } from "../../types/tickets";
 
 import { orderSchema, type Order } from "../../types/order";
 type CustomerDashboardProps = {
@@ -19,7 +20,50 @@ export default function CustomerDashboard({
   const [issueDescription, setIssueDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
+
   const [orders, setOrders] = useState<Order[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+
+  async function loadTickets(user: User) {
+    try {
+      const response = await fetch(`${BASE_BACKEND_URL}/tickets/${user.id}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        const result = ticketSchema.array().safeParse(data);
+        if (!result.success) {
+          setErrorMessage("The server returned an unexpected ticket format.");
+          return;
+        }
+        setTickets(result.data);
+        setErrorMessage("Tickets retrieved successfully");
+      } else {
+        if (typeof data.detail === "string") {
+          setErrorMessage(data.detail);
+        } else if (Array.isArray(data.detail)) {
+          setErrorMessage(
+            data.detail
+              .map(
+                (error: { loc: (string | number)[]; msg: string }) =>
+                  `${error.loc.slice(1).join(".")}: ${error.msg}`,
+              )
+              .join(" | "),
+          );
+        } else {
+          setErrorMessage(
+            "An unexpected error occurred while loading the tickets.",
+          );
+          return;
+        }
+      }
+    } catch {
+      setErrorMessage("Unable to connect. Please try again");
+      return [];
+    }
+  }
 
   async function loadOrders(user: User) {
     try {
@@ -53,15 +97,13 @@ export default function CustomerDashboard({
           setErrorMessage(
             "An unexpected error occurred while loading the orders.",
           );
-          return [];
+          return;
         }
       }
     } catch {
       setErrorMessage("Unable to connect. Please try again");
       return [];
     }
-
-    return [];
   }
 
   function openCreateTicket() {
@@ -132,6 +174,12 @@ export default function CustomerDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTickets(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   return (
     <div className="customer-dashboard">
       <div className="customer-dashboard-header">
@@ -149,9 +197,13 @@ export default function CustomerDashboard({
       </div>
 
       <div className="customer-dashboard-order-information">
-        <div className="customer-dashboard-order-information-order">
+        <div className="customer-dashboard-order-information-ordernumber">
           <p>Current Order</p>
           <p>{orders[0]?.order_number ?? "No orders yet"}</p>
+        </div>
+        <div className="customer-dashboard-order-information-orderstatus">
+          <p>Order Status</p>
+          <p>{orders[0]?.status ?? "No order status"}</p>
         </div>
       </div>
 

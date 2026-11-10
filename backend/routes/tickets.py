@@ -26,6 +26,24 @@ router = APIRouter(
 )
 
 
+@router.get("/{user_id}", status_code=status.HTTP_200_OK)
+def get_orders(
+    user_id: UUID,
+    current_user: Users = Depends(get_current_user),  # noqa: B008
+    tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
+):
+    try:
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
+        return tickets_service.get_tickets_by_user(user_id=user_id)
+    except TicketRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )
+
+
 @router.post(
     "/{ticket_id}/approval",
     status_code=status.HTTP_200_OK,

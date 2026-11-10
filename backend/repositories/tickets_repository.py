@@ -18,6 +18,17 @@ class TicketsRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_by_user_id(self, user_id: UUID) -> list[Tickets]:
+        try:
+            statement = (
+                select(Tickets)
+                .where(Tickets.user_id == user_id)
+                .order_by(Tickets.created_at.desc())
+            )
+            return list(self.db.execute(statement=statement).scalars().all())
+        except SQLAlchemyError as error:
+            raise TicketRetrievalError("Tickets could not be retrieved") from error
+
     def get_ticket(self, ticket_id: UUID) -> Tickets | None:
         try:
             return self.db.get(Tickets, ticket_id)
