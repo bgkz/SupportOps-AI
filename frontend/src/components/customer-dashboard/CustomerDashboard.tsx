@@ -127,7 +127,9 @@ export default function CustomerDashboard({
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadOrders(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   return (
