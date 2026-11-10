@@ -12,6 +12,7 @@ app.add_middleware(
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["POST"],
     allow_headers=["Content-Type", "X-API-Key"],
+    allow_credentials=True,
 )
 
 app.include_router(users_router)

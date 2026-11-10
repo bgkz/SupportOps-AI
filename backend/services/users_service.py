@@ -20,6 +20,7 @@ class UsersService:
             hashed_password=user.hashed_password,
         ):
             raise InvalidCredentialsError("Invalid email or password")
+
         return user
 
     def verify_email(self, user_id: UUID) -> Users:

@@ -26,6 +26,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
     try {
       const response = await fetch(BASE_BACKEND_URL + "/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
