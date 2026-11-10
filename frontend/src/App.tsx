@@ -8,6 +8,7 @@ import SupportAgentDashboard from "./components/support-agent-dashboard/SupportA
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+
   const isLoggedIn = user !== null;
 
   return (

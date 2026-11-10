@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from backend.exceptions.auth import InvalidCredentialsError
-from backend.exceptions.users import UserNotFoundError
+from backend.exceptions.users import EmailNotVerifiedError, UserNotFoundError
 from backend.models.users import UserRole, Users
 from backend.repositories.users_repository import UsersRepository
 from backend.schemas.users import ChangeEmailRequest, CreateUserRequest
@@ -20,6 +20,10 @@ class UsersService:
             hashed_password=user.hashed_password,
         ):
             raise InvalidCredentialsError("Invalid email or password")
+
+        if user.email_verified_at is None:
+            raise EmailNotVerifiedError("Please verify your email before logging in")
+
         return user
 
     def verify_email(self, user_id: UUID) -> Users:

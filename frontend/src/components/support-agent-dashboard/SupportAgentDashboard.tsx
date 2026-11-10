@@ -10,9 +10,11 @@ export default function SupportAgentDashboard({
 }: SupportAgentDashboardProps) {
   return (
     <div className="support-agent-dashboard">
-      <h1>Welcome AGENT, {user.email}!</h1>
+      <p>
+        Welcome AGENT, {user.email} {user.id}!
+      </p>
 
-      <button onClick={() => onLogout}>Logout</button>
+      <button onClick={onLogout}>Logout</button>
     </div>
   );
 }

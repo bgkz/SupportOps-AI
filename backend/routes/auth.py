@@ -1,8 +1,9 @@
 import secrets
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.params import Depends
 
+from backend.dependencies.auth import get_sessions_service
 from backend.dependencies.email_verification_tokens import (
     get_email_verification_tokens_service,
 )
@@ -15,6 +16,7 @@ from backend.exceptions.email_verification_tokens import (
 )
 from backend.exceptions.users import (
     EmailAlreadyExistError,
+    EmailNotVerifiedError,
     UserCreationError,
     UserNotFoundError,
     UserRetrievalError,
@@ -27,6 +29,7 @@ from backend.schemas.users import UserResponse
 from backend.services.email_verification_tokens_service import (
     EmailVerificationTokensService,
 )
+from backend.services.sessions_service import SessionsService
 from backend.services.users_service import UsersService
 
 router = APIRouter(prefix="/auth")
@@ -35,13 +38,28 @@ router = APIRouter(prefix="/auth")
 @router.post("/login", response_model=UserResponse, status_code=status.HTTP_200_OK)
 def login(
     login_request: LoginRequest,
+    response: Response,
     users_service: UsersService = Depends(get_users_service),  # noqa: B008
+    sessions_service: SessionsService = Depends(get_sessions_service),  # noqa: B008
 ):
     try:
-        return users_service.authenticate(
+        user = users_service.authenticate(
             email=login_request.email,
             password=login_request.password.get_secret_value(),
         )
+
+        session_id = sessions_service.create_session(user_id=user.id)
+
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=86400,
+        )
+
+        return user
 
     except UserRetrievalError as error:
         raise HTTPException(
@@ -50,6 +68,11 @@ def login(
     except InvalidCredentialsError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(error),
+        ) from error
+    except EmailNotVerifiedError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(error),
         ) from error
 
