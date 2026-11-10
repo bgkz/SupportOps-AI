@@ -2,11 +2,9 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from backend.exceptions.tickets import (
-    DuplicateIdempotencyKeyError,
     IdempotencyConflictError,
     TicketApprovalConflictError,
     TicketApprovalPermissionError,
-    TicketCreationError,
     TicketRetrievalError,
 )
 from backend.jobs import save_ticket_approval

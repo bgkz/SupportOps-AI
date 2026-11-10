@@ -10,13 +10,10 @@ from backend.exceptions.tickets import (
     IdempotencyConflictError,
     TicketApprovalConflictError,
     TicketApprovalPermissionError,
-    TicketCreationError,
     TicketRetrievalError,
 )
 from backend.exceptions.users import UserNotFoundError
-from backend.jobs import process_ticket
 from backend.models.users import Users
-from backend.redis_queue import job
 from backend.schemas.tickets import (
     ApproveTicketRequest,
     CreateTicketRequest,

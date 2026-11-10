@@ -6,7 +6,6 @@ from fastapi.params import Depends
 from backend.dependencies.auth import get_current_user
 from backend.dependencies.orders import get_orders_service
 from backend.exceptions.orders import OrderRetrievalError
-from backend.models.orders import Orders
 from backend.models.users import Users
 from backend.services.orders_service import OrdersService
 
