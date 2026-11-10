@@ -24,6 +24,23 @@ export default function CustomerDashboard({
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
 
+  const ticket = tickets[0];
+  const currentTicket = ticket
+    ? {
+        ticket,
+        order: ticket.order_number
+          ? (orders.find(
+              (order) => order.order_number === ticket.order_number,
+            ) ?? null)
+          : null,
+      }
+    : null;
+
+  function refresh() {
+    void loadOrders(user);
+    void loadTickets(user);
+  }
+
   async function loadTickets(user: User) {
     try {
       const response = await fetch(`${BASE_BACKEND_URL}/tickets/${user.id}`, {
@@ -39,7 +56,6 @@ export default function CustomerDashboard({
           return;
         }
         setTickets(result.data);
-        setErrorMessage("Tickets retrieved successfully");
       } else {
         if (typeof data.detail === "string") {
           setErrorMessage(data.detail);
@@ -80,7 +96,6 @@ export default function CustomerDashboard({
           return;
         }
         setOrders(result.data);
-        setErrorMessage("Orders retrieved successfully");
       } else {
         if (typeof data.detail === "string") {
           setErrorMessage(data.detail);
@@ -185,7 +200,7 @@ export default function CustomerDashboard({
       <div className="customer-dashboard-header">
         <h2>My Customer Support Portal</h2>
         <p className="customer-dashboard-header-welcome-text">
-          Welcome back, {user.email} {user.id}! Here you can find your current
+          Welcome back, {user.email} {user.id} Here you can find your current
           requests and order updates.
         </p>
         <button
@@ -199,11 +214,19 @@ export default function CustomerDashboard({
       <div className="customer-dashboard-order-information">
         <div className="customer-dashboard-order-information-ordernumber">
           <p>Current Order</p>
-          <p>{orders[0]?.order_number ?? "No orders yet"}</p>
+          <p>{currentTicket?.order?.order_number ?? "No linked order"}</p>
         </div>
         <div className="customer-dashboard-order-information-orderstatus">
           <p>Order Status</p>
-          <p>{orders[0]?.status ?? "No order status"}</p>
+          <p>{currentTicket?.order?.status ?? "No linked order"}</p>
+        </div>
+
+        <div className="customer-dashboard-order-information-ticket">
+          <p>Open Ticket</p>
+          <p>
+            {currentTicket?.ticket.id ?? "No ticket id"}{" "}
+            {currentTicket?.ticket.status ?? "No ticket status"}
+          </p>
         </div>
       </div>
 
@@ -240,6 +263,15 @@ export default function CustomerDashboard({
           </button>
         </form>
       )}
+
+      <button
+        type="button"
+        onClick={() => {
+          refresh();
+        }}
+      >
+        Refresh ↻
+      </button>
 
       <button onClick={onLogout}>Logout</button>
       {errorMessage && <p role="alert">{errorMessage}</p>}
