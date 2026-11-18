@@ -199,60 +199,57 @@ export default function CustomerDashboard({
 
   return (
     <div className="customer-dashboard">
-      <div className="customer-dashboard-header">
+      <div className="portal-header">
         <h2>My Customer Support Portal</h2>
-        <p className="customer-dashboard-header-welcome-text">
-          Welcome back, {user.email} {user.id} Here you can find your current
-          requests and order updates.
+        <p className="portal-welcome">
+          Welcome back, {user.email}
+          <br />
+          Here you can find your current requests and order updates.
         </p>
         <button
-          className="customer-dashboard-header-create-new-ticket-btn"
+          className="portal-create-ticket"
           onClick={() => openCreateTicket()}
         >
           + Create New Ticket
         </button>
       </div>
 
-      <div className="customer-dashboard-order-information">
-        <div className="customer-dashboard-order-information-ordernumber">
+      <div className="portal-overview">
+        <div className="portal-info-card">
           <p>Current Order</p>
           <p>{currentTicket?.order?.order_number ?? "No linked order"}</p>
         </div>
-        <div className="customer-dashboard-order-information-orderstatus">
+        <div className="portal-info-card">
           <p>Order Status</p>
           <p>{currentTicket?.order?.status ?? "No linked order"}</p>
         </div>
 
-        <div className="customer-dashboard-order-information-ticket">
+        <div className="portal-info-card">
           <p>Open Ticket</p>
           <p>
-            {currentTicket?.ticket.id ?? "No ticket id"}{" "}
+            {currentTicket?.ticket.text ?? "No ticket id"}{" "}
             {currentTicket?.ticket.status ?? "No ticket status"}
           </p>
         </div>
       </div>
 
-      <div className="customer-dashboard-current-order-summary">
+      <div className="portal-ticket-summary">
         <p>{currentTicket?.ticket?.text}</p>
         <p>Created at: {currentTicket?.ticket?.created_at}</p>
         <p>{currentTicket?.ticket?.status}</p>
       </div>
 
-      <p>Workflow Status</p>
-
+      <p className="portal-workflow-title">Workflow Status</p>
       {currentTicket && currentTicket.ticket.status !== "resolved" && (
         <TicketProgress ticket={currentTicket.ticket} />
       )}
 
       {openCreateTicketPopUp && (
-        <form
-          className="customer-dashboard-create-new-ticket-popup-window"
-          onSubmit={handleCreateTicket}
-        >
-          <div className="customer-dashboard-create-new-ticket-popup-window-input-order-number">
+        <form className="portal-ticket-form" onSubmit={handleCreateTicket}>
+          <div className="portal-form-field">
             <p>Affected order (optional)</p>
             <input
-              className="customer-dashboard-create-new-ticket-popup-window-input-order-number"
+              className="portal-order-input"
               type="text"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
@@ -260,7 +257,7 @@ export default function CustomerDashboard({
             />
           </div>
 
-          <div className="customer-dashboard-create-new-ticket-popup-window-create-ticket-description-container">
+          <div className="portal-form-field">
             <label htmlFor="ticket-description">Describe your issue</label>
             <textarea
               id="ticket-description"
@@ -279,6 +276,7 @@ export default function CustomerDashboard({
       )}
 
       <button
+        className="portal-refresh"
         type="button"
         onClick={() => {
           refresh();
@@ -287,7 +285,9 @@ export default function CustomerDashboard({
         Refresh ↻
       </button>
 
-      <button onClick={onLogout}>Logout</button>
+      <button className="portal-logout" onClick={onLogout}>
+        Logout
+      </button>
       {errorMessage && <p role="alert">{errorMessage}</p>}
     </div>
   );
