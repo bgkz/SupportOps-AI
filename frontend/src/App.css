@@ -5,3 +5,48 @@
   flex-direction: column;
   gap: 12px;
 }
+
+.main-app > button {
+  box-sizing: border-box;
+  align-self: center;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  min-height: 50px;
+  margin: -28px 0 32px;
+  padding: 13px 20px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.main-app > button:hover {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.main-app > button:active {
+  background: var(--accent-bg);
+}
+
+.main-app > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .main-app > button {
+    margin-top: -12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-app > button {
+    transition: none;
+  }
+}
