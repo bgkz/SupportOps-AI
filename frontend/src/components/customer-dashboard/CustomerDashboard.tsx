@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import type { User } from "../../types/user";
+import { type User } from "../../types/user";
 import "./CustomerDashboard.css";
+import { ticketSchema, type Ticket } from "../../types/tickets";
 
 import { orderSchema, type Order } from "../../types/order";
+import TicketProgress from "./TicketProgress";
+import "./TicketProgress.css";
 type CustomerDashboardProps = {
   user: User;
 
@@ -19,7 +22,66 @@ export default function CustomerDashboard({
   const [issueDescription, setIssueDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
+
   const [orders, setOrders] = useState<Order[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+
+  const ticket = tickets[0];
+  const currentTicket = ticket
+    ? {
+        ticket,
+        order: ticket.order_number
+          ? (orders.find(
+              (order) => order.order_number === ticket.order_number,
+            ) ?? null)
+          : null,
+      }
+    : null;
+
+  function refresh() {
+    void loadOrders(user);
+    void loadTickets(user);
+  }
+
+  async function loadTickets(user: User) {
+    try {
+      const response = await fetch(`${BASE_BACKEND_URL}/tickets/${user.id}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        const result = ticketSchema.array().safeParse(data);
+        if (!result.success) {
+          setErrorMessage("The server returned an unexpected ticket format.");
+          return;
+        }
+        setTickets(result.data);
+      } else {
+        if (typeof data.detail === "string") {
+          setErrorMessage(data.detail);
+        } else if (Array.isArray(data.detail)) {
+          setErrorMessage(
+            data.detail
+              .map(
+                (error: { loc: (string | number)[]; msg: string }) =>
+                  `${error.loc.slice(1).join(".")}: ${error.msg}`,
+              )
+              .join(" | "),
+          );
+        } else {
+          setErrorMessage(
+            "An unexpected error occurred while loading the tickets.",
+          );
+          return;
+        }
+      }
+    } catch {
+      setErrorMessage("Unable to connect. Please try again");
+      return [];
+    }
+  }
 
   async function loadOrders(user: User) {
     try {
@@ -36,7 +98,6 @@ export default function CustomerDashboard({
           return;
         }
         setOrders(result.data);
-        setErrorMessage("Orders retrieved successfully");
       } else {
         if (typeof data.detail === "string") {
           setErrorMessage(data.detail);
@@ -53,15 +114,13 @@ export default function CustomerDashboard({
           setErrorMessage(
             "An unexpected error occurred while loading the orders.",
           );
-          return [];
+          return;
         }
       }
     } catch {
       setErrorMessage("Unable to connect. Please try again");
       return [];
     }
-
-    return [];
   }
 
   function openCreateTicket() {
@@ -132,38 +191,65 @@ export default function CustomerDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTickets(user);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   return (
     <div className="customer-dashboard">
-      <div className="customer-dashboard-header">
+      <div className="portal-header">
         <h2>My Customer Support Portal</h2>
-        <p className="customer-dashboard-header-welcome-text">
-          Welcome back, {user.email} {user.id}! Here you can find your current
-          requests and order updates.
+        <p className="portal-welcome">
+          Welcome back, {user.email}
+          <br />
+          Here you can find your current requests and order updates.
         </p>
         <button
-          className="customer-dashboard-header-create-new-ticket-btn"
+          className="portal-create-ticket"
           onClick={() => openCreateTicket()}
         >
           + Create New Ticket
         </button>
       </div>
 
-      <div className="customer-dashboard-order-information">
-        <div className="customer-dashboard-order-information-order">
+      <div className="portal-overview">
+        <div className="portal-info-card">
           <p>Current Order</p>
-          <p>{orders[0]?.order_number ?? "No orders yet"}</p>
+          <p>{currentTicket?.order?.order_number ?? "No linked order"}</p>
+        </div>
+        <div className="portal-info-card">
+          <p>Order Status</p>
+          <p>{currentTicket?.order?.status ?? "No linked order"}</p>
+        </div>
+
+        <div className="portal-info-card">
+          <p>Open Ticket</p>
+          <p>
+            {currentTicket?.ticket.text ?? "No ticket id"}{" "}
+            {currentTicket?.ticket.status ?? "No ticket status"}
+          </p>
         </div>
       </div>
 
+      <div className="portal-ticket-summary">
+        <p>{currentTicket?.ticket?.text}</p>
+        <p>Created at: {currentTicket?.ticket?.created_at}</p>
+        <p>{currentTicket?.ticket?.status}</p>
+      </div>
+
+      <p className="portal-workflow-title">Workflow Status</p>
+      {currentTicket && currentTicket.ticket.status !== "resolved" && (
+        <TicketProgress ticket={currentTicket.ticket} />
+      )}
+
       {openCreateTicketPopUp && (
-        <form
-          className="customer-dashboard-create-new-ticket-popup-window"
-          onSubmit={handleCreateTicket}
-        >
-          <div className="customer-dashboard-create-new-ticket-popup-window-input-order-number">
+        <form className="portal-ticket-form" onSubmit={handleCreateTicket}>
+          <div className="portal-form-field">
             <p>Affected order (optional)</p>
             <input
-              className="customer-dashboard-create-new-ticket-popup-window-input-order-number"
+              className="portal-order-input"
               type="text"
               value={orderNumber}
               onChange={(e) => setOrderNumber(e.target.value)}
@@ -171,7 +257,7 @@ export default function CustomerDashboard({
             />
           </div>
 
-          <div className="customer-dashboard-create-new-ticket-popup-window-create-ticket-description-container">
+          <div className="portal-form-field">
             <label htmlFor="ticket-description">Describe your issue</label>
             <textarea
               id="ticket-description"
@@ -189,7 +275,19 @@ export default function CustomerDashboard({
         </form>
       )}
 
-      <button onClick={onLogout}>Logout</button>
+      <button
+        className="portal-refresh"
+        type="button"
+        onClick={() => {
+          refresh();
+        }}
+      >
+        Refresh ↻
+      </button>
+
+      <button className="portal-logout" onClick={onLogout}>
+        Logout
+      </button>
       {errorMessage && <p role="alert">{errorMessage}</p>}
     </div>
   );
