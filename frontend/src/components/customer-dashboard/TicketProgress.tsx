@@ -7,20 +7,7 @@ type TicketProgressProps = {
 export default function TicketProgress({ ticket }: TicketProgressProps) {
   return (
     <div className="ticket-progress-container">
-      {ticket.status === "pending" && (
-        <>
-          <p>Ticket submitted!</p>
-          <span
-            className="step-completed"
-            role="img"
-            aria-label="Abgeschlossen"
-          >
-            ✓
-          </span>
-        </>
-      )}
-
-      {ticket.status == "processing" && (
+      {(ticket.status === "pending" || ticket.status === "processing") && (
         <>
           <p>Ticket submitted!</p>
           <span
