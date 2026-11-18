@@ -42,4 +42,27 @@
   background-color: whitesmoke;
   width: 200px;
   height: 150px;
+  cursor: pointer;
+}
+
+.customer-dashboard-current-order-summary {
+  background-color: #121212;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.customer-dashboard-workflow-status-container {
+  background-color: #121212;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
 }

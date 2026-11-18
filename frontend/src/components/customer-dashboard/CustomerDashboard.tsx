@@ -4,6 +4,8 @@ import "./CustomerDashboard.css";
 import { ticketSchema, type Ticket } from "../../types/tickets";
 
 import { orderSchema, type Order } from "../../types/order";
+import TicketProgress from "./TicketProgress";
+import "./TicketProgress.css";
 type CustomerDashboardProps = {
   user: User;
 
@@ -229,6 +231,18 @@ export default function CustomerDashboard({
           </p>
         </div>
       </div>
+
+      <div className="customer-dashboard-current-order-summary">
+        <p>{currentTicket?.ticket?.text}</p>
+        <p>Created at: {currentTicket?.ticket?.created_at}</p>
+        <p>{currentTicket?.ticket?.status}</p>
+      </div>
+
+      <p>Workflow Status</p>
+
+      {currentTicket && currentTicket.ticket.status !== "resolved" && (
+        <TicketProgress ticket={currentTicket.ticket} />
+      )}
 
       {openCreateTicketPopUp && (
         <form

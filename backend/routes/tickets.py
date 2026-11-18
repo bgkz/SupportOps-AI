@@ -13,6 +13,7 @@ from backend.exceptions.tickets import (
     TicketRetrievalError,
 )
 from backend.exceptions.users import UserNotFoundError
+from backend.jobs import process_ticket
 from backend.models.users import Users
 from backend.schemas.tickets import (
     ApproveTicketRequest,
@@ -20,6 +21,7 @@ from backend.schemas.tickets import (
     TicketResponse,
 )
 from backend.services.tickets_service import TicketsService
+from backend.worker import job
 
 router = APIRouter(
     prefix="/tickets",
@@ -110,6 +112,8 @@ def create_ticket(
         ticket = tickets_service.create_ticket(
             create_ticket_request, idempotency_key, current_user
         )
+
+        job.enqueue(process_ticket, ticket.id)
 
         return ticket
 
