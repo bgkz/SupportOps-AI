@@ -1,8 +1,15 @@
+import re
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
+
+
+def chunk_text(text: str) -> list[str]:
+    sections = re.split(r"(?m)(?=^#{1,6}\s+)", text)
+
+    return [section.strip() for section in sections if section.strip()]
 
 
 def main() -> None:
@@ -26,29 +33,40 @@ def main() -> None:
 
     for file_path in knowledge_dir.glob("*.md"):
         text = file_path.read_text(encoding="utf-8")
-        vector = model.encode(text).tolist()
-
-        # Gleicher relativer Dateipfad ergibt immer dieselbe ID
+        chunks = chunk_text(text)
         relative_path = file_path.relative_to(knowledge_dir).as_posix()
-        point_id = str(uuid5(NAMESPACE_URL, f"supportops/knowledge/{relative_path}"))
 
-        client.upsert(
-            collection_name=collection_name,
-            points=[
+        points = []
+
+        for chunk_index, chunk in enumerate(chunks):
+            vector = model.encode(chunk).tolist()
+
+            point_id = str(
+                uuid5(
+                    NAMESPACE_URL,
+                    f"supportops/knowledge/{relative_path}/chunk/{chunk_index}",
+                )
+            )
+
+            points.append(
                 models.PointStruct(
                     id=point_id,
                     vector=vector,
                     payload={
-                        "text": text,
+                        "text": chunk,
                         "source": relative_path,
                         "document_id": file_path.stem,
+                        "chunk_index": chunk_index,
                     },
                 )
-            ],
-            wait=True,
-        )
+            )
 
-        print(f"Indexiert: {relative_path}")
+        if points:
+            client.upsert(
+                collection_name=collection_name,
+                points=points,
+                wait=True,
+            )
 
     client.close()
 

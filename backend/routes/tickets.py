@@ -141,5 +141,7 @@ def get_tickets(
             )
 
         return tickets_service.get_all_tickets()
-    except:
-        print("An exception occurred")
+    except TicketRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )
