@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { User } from "../../types/user";
 import "./SupportAgentDashboard.css";
-import "./TicketList";
 
 import { ticketSchema, type Ticket } from "../../types/tickets";
 import TicketList from "./TicketList";
+import TicketDetails from "./TicketDetails";
 type SupportAgentDashboardProps = {
   user: User;
   onLogout: () => void;
@@ -18,11 +18,11 @@ export default function SupportAgentDashboard({
   const [allTickets, setAllTickets] = useState<Ticket[]>([]);
   const [showAllTickets, setShowAllTickets] = useState(false);
 
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
   const unresolvedTickets = allTickets.filter(
     (ticket) => ticket.status !== "resolved",
   );
-
-  function refresh() {}
 
   async function loadTickets() {
     try {
@@ -68,6 +68,10 @@ export default function SupportAgentDashboard({
     void loadTickets();
   }, []);
 
+  function refresh() {
+    void loadTickets();
+  }
+
   return (
     <div className="support-agent-dashboard">
       <p>Welcome AGENT, {user.email}!</p>
@@ -83,12 +87,35 @@ export default function SupportAgentDashboard({
           </button>
         </div>
 
-        {showAllTickets && <TicketList tickets={allTickets}></TicketList>}
+        {showAllTickets && (
+          <TicketList
+            tickets={allTickets}
+            onSelect={setSelectedTicket}
+          ></TicketList>
+        )}
 
         {!showAllTickets && (
-          <TicketList tickets={unresolvedTickets}></TicketList>
+          <TicketList
+            tickets={unresolvedTickets}
+            onSelect={setSelectedTicket}
+          ></TicketList>
         )}
       </div>
+
+      {selectedTicket && (
+        <div className="modal-overlay" onClick={() => setSelectedTicket(null)}>
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Ticket details"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <TicketDetails ticket={selectedTicket} />
+            <button onClick={() => setSelectedTicket(null)}>Schließen</button>
+          </div>
+        </div>
+      )}
 
       <button
         type="button"
