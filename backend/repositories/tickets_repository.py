@@ -20,7 +20,11 @@ class TicketsRepository:
 
     def get_all(self) -> list[Tickets]:
         try:
-            return list(self.db.scalars(select(Tickets)).all())
+            return list(
+                self.db.scalars(
+                    select(Tickets).order_by(Tickets.created_at.desc())
+                ).all()
+            )
         except SQLAlchemyError as error:
             raise TicketRetrievalError("Tickets could not be retrieved") from error
 
