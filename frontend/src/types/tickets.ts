@@ -12,6 +12,7 @@ export const ticketSchema = z.object({
       "shipping_status",
       "invoice_payment",
       "technical_faq",
+      "out_of_scope",
     ])
     .nullable(),
   status: z.enum([

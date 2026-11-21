@@ -33,7 +33,10 @@ class TicketsService:
         self.tickets_repo = tickets_repository
         self.users_service = users_service
         self.orders_service = orders_service
-        
+
+    def get_all_tickets(self) -> list[Tickets]:
+        return self.tickets_repo.get_all()
+
     def get_tickets_by_user(self, user_id: UUID) -> list[Tickets]:
         return self.tickets_repo.get_by_user_id(user_id=user_id)
 

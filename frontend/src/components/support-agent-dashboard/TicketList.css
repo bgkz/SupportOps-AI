@@ -1,0 +1,120 @@
+.ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--social-bg);
+  border-radius: 0 0 16px 16px;
+  width: 100%;
+  max-height: 680px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.ticket-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 140px;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.ticket-list .ticket-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 3px 12px var(--accent-bg);
+}
+
+.ticket-list .ticket-card > p:first-child {
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+.ticket-list .ticket-card > p:nth-child(2) {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--text-h);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.ticket-list .ticket-card > p:nth-child(3) {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.ticket-list .ticket-card > p:last-child {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .ticket-list {
+    padding: 10px;
+  }
+
+  .ticket-list .ticket-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .ticket-list .ticket-card > p:nth-child(3) {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .ticket-list .ticket-card > p:nth-child(2) {
+    grid-row: 3;
+  }
+
+  .ticket-list .ticket-card > p:last-child {
+    grid-row: 4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-list .ticket-card {
+    transition: none;
+  }
+}

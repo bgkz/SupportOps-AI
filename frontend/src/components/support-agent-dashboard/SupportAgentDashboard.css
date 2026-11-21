@@ -1,4 +1,172 @@
 .support-agent-dashboard {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 36px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.support-agent-dashboard > p:first-child {
+  padding: 18px 20px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.support-agent-dashboard .ticket-queue {
+  min-height: 500px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 4px 20px var(--social-bg);
+}
+
+.support-agent-dashboard .ticket-queue > p:first-child {
+  padding: 24px 24px 16px;
+  color: var(--text-h);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+
+.support-agent-dashboard .selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.support-agent-dashboard .selector button,
+.support-agent-dashboard > button,
+.support-agent-dashboard .modal-content > button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.support-agent-dashboard .selector button:hover,
+.support-agent-dashboard > button:hover,
+.support-agent-dashboard .modal-content > button:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.support-agent-dashboard .selector button:focus-visible,
+.support-agent-dashboard > button:focus-visible,
+.support-agent-dashboard .modal-content > button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.support-agent-dashboard > button {
+  align-self: flex-start;
+  min-width: 120px;
+}
+
+.support-agent-dashboard > button:first-of-type {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.support-agent-dashboard > button + button {
+  margin-top: -10px;
+  color: var(--text);
+}
+
+.support-agent-dashboard > p[role="alert"] {
+  padding: 14px 18px;
+  border: 1px solid #dc2626;
+  border-radius: 10px;
+  color: var(--text-h);
+  background: rgba(220, 38, 38, 0.08);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.support-agent-dashboard .modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(8, 6, 13, 0.65);
+  backdrop-filter: blur(5px);
+  padding: 20px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.support-agent-dashboard .modal-content {
+  background: var(--bg);
+  color: var(--text);
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  width: min(720px, 100%);
+  max-height: min(88vh, 88dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  box-sizing: border-box;
+  box-shadow: var(--shadow);
+}
+
+.support-agent-dashboard .modal-content > button {
+  display: block;
+  margin: 20px 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .support-agent-dashboard {
+    padding: 20px 12px;
+    gap: 16px;
+  }
+
+  .support-agent-dashboard .ticket-queue > p:first-child {
+    padding: 20px 16px 14px;
+  }
+
+  .support-agent-dashboard .selector {
+    padding: 0 16px 16px;
+  }
+
+  .support-agent-dashboard .selector button {
+    flex: 1 1 150px;
+  }
+
+  .support-agent-dashboard .modal-overlay {
+    padding: 12px;
+  }
+
+  .support-agent-dashboard .modal-content {
+    padding: 18px;
+    border-radius: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-agent-dashboard .selector button,
+  .support-agent-dashboard > button,
+  .support-agent-dashboard .modal-content > button {
+    transition: none;
+  }
 }

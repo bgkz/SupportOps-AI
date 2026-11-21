@@ -25,13 +25,6 @@ class CreateTicketRequest(BaseModel):
     )
 
 
-# class CreateTicketRequest(BaseModel):
-#     user_id: UUID
-#     text: str = Field(
-#         min_length=TICKET_TEXT_MIN_LENGTH, max_length=TICKET_TEXT_MAX_LENGTH
-#     )
-
-
 class TicketResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
@@ -54,5 +47,5 @@ class ReplyDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     reply_text: str = Field(min_length=1)
-    source_ids: list[str]
-    needs_manual_review: bool
+    source_ids: list[str] | None
+    needs_manual_review: bool | None

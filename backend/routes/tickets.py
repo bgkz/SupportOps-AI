@@ -14,7 +14,7 @@ from backend.exceptions.tickets import (
 )
 from backend.exceptions.users import UserNotFoundError
 from backend.jobs import process_ticket
-from backend.models.users import Users
+from backend.models.users import UserRole, Users
 from backend.schemas.tickets import (
     ApproveTicketRequest,
     CreateTicketRequest,
@@ -126,3 +126,22 @@ def create_ticket(
         )
     except OrderNotFoundError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error))
+
+
+@router.get("/")
+def get_tickets(
+    tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
+    current_user: Users = Depends(get_current_user),  # noqa: B008
+):
+    try:
+        if current_user.user_role is not UserRole.SUPPORT_AGENT:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
+        return tickets_service.get_all_tickets()
+    except TicketRetrievalError as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(error)
+        )
