@@ -15,6 +15,7 @@ class TicketCategories(Enum):
     SHIPPING_STATUS = "shipping_status"
     INVOICE_PAYMENT = "invoice_payment"
     TECHNICAL_FAQ = "technical_faq"
+    OUT_OF_SCOPE = "out_of_scope"
 
 
 class TicketStatus(Enum):

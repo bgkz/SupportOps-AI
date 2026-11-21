@@ -69,6 +69,7 @@ export default function SupportAgentDashboard({
   }, []);
 
   function refresh() {
+    setErrorMessage("");
     void loadTickets();
   }
 
