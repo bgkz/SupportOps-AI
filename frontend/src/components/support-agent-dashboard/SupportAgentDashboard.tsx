@@ -65,7 +65,9 @@ export default function SupportAgentDashboard({
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function refresh() {
