@@ -6,6 +6,7 @@ import { ticketSchema, type Ticket } from "../../types/tickets";
 import { orderSchema, type Order } from "../../types/order";
 import TicketProgress from "./TicketProgress";
 import "./TicketProgress.css";
+import ChatWindow from "../chat/ChatWindow";
 type CustomerDashboardProps = {
   user: User;
 
@@ -22,6 +23,7 @@ export default function CustomerDashboard({
   const [issueDescription, setIssueDescription] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [showChatWindow, setShowChatWindow] = useState(false);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -45,7 +47,7 @@ export default function CustomerDashboard({
 
   async function loadTickets(user: User) {
     try {
-      const response = await fetch(`${BASE_BACKEND_URL}/tickets/${user.id}`, {
+      const response = await fetch(`${BASE_BACKEND_URL}/tickets/user/${user.id}`, {
         method: "GET",
         credentials: "include",
       });
@@ -239,6 +241,22 @@ export default function CustomerDashboard({
         <p>{currentTicket?.ticket?.status}</p>
       </div>
 
+      <button onClick={() => setShowChatWindow(true)}>Open Support-Chat</button>
+      {showChatWindow && (
+        <div className="modal-overlay" onClick={() => setShowChatWindow(false)}>
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Customer / Support Chat"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ChatWindow></ChatWindow>
+
+            <button onClick={() => setShowChatWindow(false)}>Schließen</button>
+          </div>
+        </div>
+      )}
       <p className="portal-workflow-title">Workflow Status</p>
       {currentTicket && currentTicket.ticket.status !== "resolved" && (
         <TicketProgress ticket={currentTicket.ticket} />
