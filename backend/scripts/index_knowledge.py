@@ -5,6 +5,8 @@ from uuid import NAMESPACE_URL, uuid5
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
 
+from backend.config import QDRANT_CLIENT_URL, QDRANT_COLLECTION_NAME
+
 
 def chunk_text(text: str) -> list[str]:
     sections = re.split(r"(?m)(?=^#{1,6}\s+)", text)
@@ -19,8 +21,8 @@ def main() -> None:
         "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
 
-    client = QdrantClient(url="http://localhost:6333")
-    collection_name = "support_knowledge"
+    client = QdrantClient(url=QDRANT_CLIENT_URL)
+    collection_name = QDRANT_COLLECTION_NAME
 
     if not client.collection_exists(collection_name):
         client.create_collection(
