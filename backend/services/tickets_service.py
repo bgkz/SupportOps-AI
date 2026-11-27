@@ -41,10 +41,12 @@ class TicketsService:
         return self.tickets_repo.get_by_user_id(user_id=user_id)
 
     def approve_ticket(
-        self, ticket_id: UUID, approve_ticket_request: ApproveTicketRequest
+        self,
+        ticket_id: UUID,
+        approve_ticket_request: ApproveTicketRequest,
+        current_user: Users,
     ):
-        user = self.users_service.get_user(user_id=approve_ticket_request.user_id)
-        if user.user_role == UserRole.CUSTOMER:
+        if current_user.user_role is not UserRole.SUPPORT_AGENT:
             raise TicketApprovalPermissionError(
                 "You do not have permission to approve or reject this ticket."
             )

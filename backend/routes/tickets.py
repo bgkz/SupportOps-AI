@@ -28,8 +28,8 @@ router = APIRouter(
 )
 
 
-@router.get("/{user_id}", status_code=status.HTTP_200_OK)
-def get_orders(
+@router.get("/user/{user_id}", status_code=status.HTTP_200_OK)
+def get_user_tickets(
     user_id: UUID,
     current_user: Users = Depends(get_current_user),  # noqa: B008
     tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
@@ -55,10 +55,19 @@ def approve_ticket(
     ticket_id: UUID,
     approve_ticket_request: ApproveTicketRequest,
     tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
+    current_user: Users = Depends(get_current_user),  # noqa: B008
 ):
     try:
+        if current_user.user_role is not UserRole.SUPPORT_AGENT:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied",
+            )
+
         return tickets_service.approve_ticket(
-            ticket_id=ticket_id, approve_ticket_request=approve_ticket_request
+            ticket_id=ticket_id,
+            approve_ticket_request=approve_ticket_request,
+            current_user=current_user,
         )
     except UserNotFoundError as error:
         raise HTTPException(
@@ -78,17 +87,24 @@ def approve_ticket(
     except TicketApprovalConflictError as error:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            det=str(error),
+            detail=str(error),
         ) from error
 
 
 @router.get(
-    "/{ticket_id}", status_code=status.HTTP_200_OK, response_model=TicketResponse
+    "/ticket/{ticket_id}", status_code=status.HTTP_200_OK, response_model=TicketResponse
 )
 def get_ticket(
     ticket_id: UUID,
     tickets_service: TicketsService = Depends(get_tickets_service),  # noqa: B008
+    current_user: Users = Depends(get_current_user),  # noqa: B008
 ):
+
+    if current_user.user_role is not UserRole.SUPPORT_AGENT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
 
     try:
         return tickets_service.get_ticket(ticket_id=ticket_id)

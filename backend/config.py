@@ -32,7 +32,10 @@ ORDER_NUMBER_MAX_LENGTH = 10
 PASSWORD_MIN_LENGTH = 12
 
 
-QDRANT_CLIENT_URL = "http://localhost:6333"
+QDRANT_CLIENT_URL = os.getenv(
+    "QDRANT_CLIENT_URL",
+    "http://localhost:6333",
+)
 QDRANT_COLLECTION_NAME = "support_knowledge"
 
 

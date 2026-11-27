@@ -11,7 +11,8 @@ from backend.models.tickets import TicketCategories, TicketStatus
 
 
 class ApproveTicketRequest(BaseModel):
-    user_id: UUID
+    model_config = ConfigDict(extra="forbid")
+
     approved: bool
 
 
