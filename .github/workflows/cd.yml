@@ -77,8 +77,8 @@ jobs:
             --env-file backend/.env
           )
 
-          "${compose[@]}" config --quiet
-          "${compose[@]}" build backend worker frontend
+          "${compose[@]}" config --quiet </dev/null
+          "${compose[@]}" build backend worker frontend </dev/null
           umask 077
           backup_dir="$HOME/supportops-backups"
           mkdir -p "$backup_dir"
@@ -88,16 +88,16 @@ jobs:
 
           "${compose[@]}" exec -T db \
             sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
-            > "${backup_file}.partial"
+            </dev/null > "${backup_file}.partial"
 
           test -s "${backup_file}.partial"
           mv "${backup_file}.partial" "$backup_file"
 
           echo "Datenbanksicherung erstellt: $backup_file"
-          "${compose[@]}" run --rm --no-deps backend \
-            alembic -c backend/alembic.ini upgrade head
+          "${compose[@]}" run --rm --no-deps -T backend \
+            alembic -c backend/alembic.ini upgrade head </dev/null
 
-          "${compose[@]}" up -d --no-deps backend worker frontend
+          "${compose[@]}" up -d --no-deps backend worker frontend </dev/null
           for attempt in $(seq 1 30); do
             if curl --fail --silent --max-time 10 \
                 --output /dev/null http://127.0.0.1:8080/ &&
