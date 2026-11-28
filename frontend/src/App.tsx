@@ -25,13 +25,18 @@ function App() {
 
           {openRegistrationView && (
             <div
-              className="modal-content"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Registrierung"
-              onClick={(event) => event.stopPropagation()}
+              className="registration-overlay"
+              onClick={() => setOpenRegistrationView(false)}
             >
-              <RegistrationView />
+              <div
+                className="modal-content"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Registrierung"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <RegistrationView />
+              </div>
             </div>
           )}
         </>

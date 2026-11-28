@@ -54,9 +54,50 @@
   border-radius: 12px;
 }
 
+.registration-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgba(8, 6, 13, 0.65);
+}
+
+.registration-overlay > .modal-content {
+  width: 100%;
+  max-width: 460px;
+  min-height: 0;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 32px;
+  border: 1px solid var(--accent-border);
+  border-radius: 20px;
+  background: linear-gradient(var(--accent-bg), transparent 100px), var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.registration-overlay > .modal-content::before {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin-bottom: 24px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 @media (max-width: 480px) {
   .main-app > button {
     margin-top: -12px;
+  }
+
+  .registration-overlay > .modal-content {
+    padding: 24px 20px;
+    border-radius: 16px;
   }
 }
 
