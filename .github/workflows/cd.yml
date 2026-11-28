@@ -33,11 +33,12 @@ jobs:
 
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
-      - name: SSH-Verbindung testen
+      - name: Anwendung auf AWS deployen
         shell: bash
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
@@ -47,7 +48,78 @@ jobs:
             -o StrictHostKeyChecking=yes \
             -o ConnectTimeout=20 \
             "$SSH_USER@$SSH_HOST" \
-            "whoami && sudo -n docker compose version"
+            bash -s -- "$DEPLOY_SHA" <<'REMOTE'
+          set -euo pipefail
+
+          cd "$HOME/SupportOps-AI"
+          deploy_sha="$1"
+
+          git fetch origin main
+          git cat-file -e "${deploy_sha}^{commit}"
+
+          echo "Aktueller Server-Commit: $(git rev-parse HEAD)"
+          echo "Geprüfter Ziel-Commit: $deploy_sha"
+          if [ "$(git rev-parse origin/main)" != "$deploy_sha" ]; then
+            echo "Neuerer Commit auf main vorhanden. Deployment übersprungen."
+            exit 0
+          fi
+
+          if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "Lokale Änderungen auf dem Server. Deployment abgebrochen."
+            exit 1
+          fi
+
+          git checkout --detach "$deploy_sha"
+
+          compose=(
+            sudo -n docker compose
+            -f docker-compose.prod.yml
+            --env-file backend/.env
+          )
+
+          "${compose[@]}" config --quiet
+          "${compose[@]}" build backend worker frontend
+          umask 077
+          backup_dir="$HOME/supportops-backups"
+          mkdir -p "$backup_dir"
+          chmod 700 "$backup_dir"
+
+          backup_file="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-${deploy_sha}.dump"
+
+          "${compose[@]}" exec -T db \
+            sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
+            > "${backup_file}.partial"
+
+          test -s "${backup_file}.partial"
+          mv "${backup_file}.partial" "$backup_file"
+
+          echo "Datenbanksicherung erstellt: $backup_file"
+          "${compose[@]}" run --rm --no-deps backend \
+            alembic -c backend/alembic.ini upgrade head
+
+          "${compose[@]}" up -d --no-deps backend worker frontend
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 10 \
+                --output /dev/null http://127.0.0.1:8080/ &&
+               curl --fail --silent --max-time 10 \
+                --output /dev/null http://127.0.0.1:8080/api/openapi.json; then
+
+              worker_id="$("${compose[@]}" ps --status running -q worker)"
+
+              if [ -n "$worker_id" ]; then
+                echo "Deployment erfolgreich: $deploy_sha"
+                exit 0
+              fi
+            fi
+
+            echo "Anwendung noch nicht bereit – Versuch $attempt/30"
+            sleep 5
+          done
+
+          echo "Deployment-Prüfung fehlgeschlagen."
+          "${compose[@]}" ps
+          exit 1
+          REMOTE
 
       - name: SSH-Schlüssel entfernen
         if: always()
