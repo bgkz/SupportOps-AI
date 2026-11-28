@@ -84,3 +84,12 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+    
+
+  deploy:
+    name: Deploy to AWS
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit
